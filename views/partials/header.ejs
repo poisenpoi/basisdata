@@ -1,0 +1,35 @@
+<header class="site-header">
+  <div class="site-header-inner">
+    <a href="/" class="brand-lockup">
+      <strong>TokoKita</strong>
+      <span>Admin Panel</span>
+    </a>
+
+    <nav class="main-nav" aria-label="Menu utama">
+      <a href="/"            class="nav-item <%= currentPath === '/' ? 'active' : '' %>">Dashboard</a>
+      <a href="/produk"      class="nav-item <%= currentPath.startsWith('/produk')     ? 'active' : '' %>">Produk</a>
+      <a href="/pesanan"     class="nav-item <%= currentPath.startsWith('/pesanan')    ? 'active' : '' %>">Pesanan</a>
+      <a href="/pengiriman"  class="nav-item <%= currentPath.startsWith('/pengiriman') ? 'active' : '' %>">Pengiriman</a>
+      <a href="/pembayaran"  class="nav-item <%= currentPath.startsWith('/pembayaran') ? 'active' : '' %>">Pembayaran</a>
+      <a href="/pelanggan"   class="nav-item <%= currentPath.startsWith('/pelanggan')  ? 'active' : '' %>">Pelanggan</a>
+      <a href="/master"      class="nav-item <%= currentPath.startsWith('/master')     ? 'active' : '' %>">Master</a>
+    </nav>
+
+    <div class="header-user">
+      <% if (currentUser) { %>
+        <div>
+          <strong><%= currentUser.nama %></strong>
+          <span><%= currentUser.role %></span>
+        </div>
+      <% } %>
+      <button type="button" class="link-btn" id="btnLogout">Keluar</button>
+    </div>
+  </div>
+</header>
+
+<script>
+  document.getElementById('btnLogout')?.addEventListener('click', async () => {
+    try { await API.post('/api/auth/logout'); } catch (_) {}
+    location.href = '/login';
+  });
+</script>

@@ -1,58 +1,464 @@
-<h2 id="orderTitle">Memuat...</h2>
-<p class="text-muted" id="orderMeta"></p>
+<p class="page-actions"><a href="/pesanan" class="btn">Kembali</a></p>
 
-<h3>Produk Dipesan</h3>
-<table class="table">
-  <thead>
-    <tr>
-      <th>Produk</th>
-      <th>Jumlah</th>
-      <th>Harga Satuan</th>
-      <th>Subtotal</th>
-    </tr>
-  </thead>
-  <tbody id="items"></tbody>
-</table>
+<div class="detail-title">
+  <div>
+    <h2 id="orderTitle">Memuat...</h2>
+    <p class="text-muted" id="orderMeta"></p>
+  </div>
+</div>
 
-<ul class="kv-list" id="totals"></ul>
+<div class="page-split page-split-wide">
+  <div class="page-stack">
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <h3>Ringkasan Tagihan</h3>
+          <p>Total otomatis dari item, ongkir, dan diskon.</p>
+        </div>
+      </div>
+      <div class="section-body">
+        <ul class="kv-list summary-list" id="totals"></ul>
+      </div>
+    </section>
 
-<h3>Alamat Penerima</h3>
-<ul class="kv-list" id="alamat"></ul>
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <h3>Item Pesanan</h3>
+          <p>Tambah item baru atau koreksi item yang sudah masuk.</p>
+        </div>
+        <div class="section-actions">
+          <button type="button" class="btn" data-toggle-panel="addItemForm" data-closed-label="Tambah Item" data-open-label="Tutup Input">Tambah Item</button>
+        </div>
+      </div>
+      <div class="section-body">
+        <form id="addItemForm" class="filter-bar compact-bar input-grid is-hidden">
+          <label>
+            Produk:
+            <select id="addProduk" required></select>
+          </label>
+          <label>
+            Jumlah:
+            <input type="number" id="addJumlah" min="1" value="1" required>
+          </label>
+          <label>
+            Harga Satuan:
+            <input type="number" id="addHarga" min="0" required>
+          </label>
+          <button type="submit" class="btn btn-primary">Tambah Item</button>
+        </form>
 
-<div id="bayarSection"></div>
-<div id="kirimSection"></div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Produk</th>
+                <th>Jumlah</th>
+                <th>Harga Satuan</th>
+                <th>Subtotal</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="items"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
-<h3>Ubah Status Pesanan</h3>
-<form id="statusForm">
-  <select id="statusSelect" class="form-control"></select>
-  <button type="submit" class="btn btn-primary">Update Status</button>
-  <a href="/pesanan" class="btn">Kembali</a>
-</form>
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <h3>Alamat Penerima</h3>
+          <p>Data alamat yang dipakai untuk pesanan ini.</p>
+        </div>
+      </div>
+      <div class="section-body">
+        <ul class="kv-list summary-list" id="alamat"></ul>
+      </div>
+    </section>
+  </div>
+
+  <aside class="control-stack">
+    <section class="section control-panel">
+      <div class="section-header">
+        <div>
+          <h3>Edit Pesanan</h3>
+          <p>Ubah alamat, status, ongkir, dan diskon.</p>
+        </div>
+        <div class="section-actions">
+          <button type="button" class="btn" data-toggle-panel="orderEditPanel" data-closed-label="Edit Pesanan" data-open-label="Tutup Edit">Edit Pesanan</button>
+        </div>
+      </div>
+      <div class="section-body input-panel is-hidden" id="orderEditPanel">
+        <form id="orderForm" class="filter-bar vertical-form">
+          <label>
+            Alamat:
+            <select id="editAlamat" required></select>
+          </label>
+          <label>
+            Tanggal:
+            <input type="datetime-local" id="editTanggal">
+          </label>
+          <label>
+            Ongkir:
+            <input type="number" id="editOngkir" min="0" value="0">
+          </label>
+          <label>
+            Diskon:
+            <input type="number" id="editDiskon" min="0" value="0">
+          </label>
+          <label>
+            Status:
+            <select id="editStatus"></select>
+          </label>
+          <button type="submit" class="btn btn-primary">Simpan Pesanan</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="section control-panel" id="bayarSection"></section>
+    <section class="section control-panel" id="kirimSection"></section>
+  </aside>
+</div>
 
 <script>
   const ID_PESANAN = "<%= idPesanan %>";
+  let orderOptions = { alamat: [], produk: [] };
+  let kurirOptions = [];
+  let currentData = null;
+
   function pad(n, w) { return String(n).padStart(w, '0'); }
+
+  function toDateTimeInput(value) {
+    if (!value) return '';
+    return String(value).replace(' ', 'T').slice(0, 16);
+  }
+
+  function toDateInput(value) {
+    if (!value) return '';
+    return String(value).slice(0, 10);
+  }
+
+  function fillStatusSelect(sel, map, selected) {
+    clear(sel);
+    for (const [key, label] of Object.entries(map)) {
+      const opt = el('option', { value: key }, label);
+      if (String(selected) === String(key)) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+
+  function sectionHeader(title, note, panelId, closedLabel, openLabel) {
+    const children = [
+      el('div', null,
+        el('h3', null, title),
+        note ? el('p', null, note) : null
+      )
+    ];
+    if (panelId) {
+      children.push(el('div', { class: 'section-actions' },
+        el('button', {
+          type: 'button',
+          class: 'btn',
+          'data-toggle-panel': panelId,
+          'data-closed-label': closedLabel || 'Buka',
+          'data-open-label': openLabel || 'Tutup'
+        }, closedLabel || 'Buka')
+      ));
+    }
+    return el('div', { class: 'section-header' }, children);
+  }
+
+  function sectionBody(...children) {
+    return el('div', { class: 'section-body' }, children);
+  }
+
+  function productSelect(selectedId) {
+    const sel = el('select', { class: 'form-control' });
+    for (const p of orderOptions.produk) {
+      const opt = el('option', { value: p.id_produk }, p.nama_produk);
+      if (String(selectedId) === String(p.id_produk)) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    return sel;
+  }
+
+  function kurirSelect(selectedId) {
+    const sel = el('select', { class: 'form-control' });
+    for (const k of kurirOptions) {
+      const opt = el('option', { value: k.id_kurir }, `${k.kode_kurir} - ${k.nama_kurir}`);
+      if (String(selectedId) === String(k.id_kurir)) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    return sel;
+  }
+
+  function metodeSelect(selected) {
+    const sel = el('select', { class: 'form-control' });
+    [
+      ['transfer_bank', 'Transfer Bank'],
+      ['e_wallet', 'E-Wallet'],
+      ['cod', 'COD']
+    ].forEach(([value, label]) => {
+      const opt = el('option', { value }, label);
+      if (selected === value) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    return sel;
+  }
+
+  function renderOrderForm(pesanan) {
+    const alamatSel = document.getElementById('editAlamat');
+    clear(alamatSel);
+    for (const a of orderOptions.alamat) {
+      const opt = el('option', { value: a.id_alamat },
+        `${a.pelanggan_nama} - ${a.label || 'Alamat'} - ${a.kota}, ${a.provinsi}`
+      );
+      if (String(pesanan.id_alamat) === String(a.id_alamat)) opt.selected = true;
+      alamatSel.appendChild(opt);
+    }
+    document.getElementById('editTanggal').value = toDateTimeInput(pesanan.tanggal_pesan);
+    document.getElementById('editOngkir').value = Number(pesanan.ongkos_kirim || 0);
+    document.getElementById('editDiskon').value = Number(pesanan.diskon || 0);
+    fillStatusSelect(document.getElementById('editStatus'), window.STATUS_PESANAN, pesanan.status_pesanan);
+  }
+
+  function renderAddItemForm() {
+    const sel = document.getElementById('addProduk');
+    clear(sel);
+    for (const p of orderOptions.produk) {
+      const opt = el('option', {
+        value: p.id_produk,
+        'data-harga': p.harga
+      }, `${p.nama_produk} - ${rupiah(p.harga)}`);
+      sel.appendChild(opt);
+    }
+    if (sel.options.length) document.getElementById('addHarga').value = sel.options[0].getAttribute('data-harga') || 0;
+  }
+
+  function renderItems(items) {
+    const tbody = document.getElementById('items');
+    clear(tbody);
+    if (!items.length) {
+      tbody.appendChild(el('tr', null, el('td', { colspan: 5 }, 'Belum ada item pesanan.')));
+      return;
+    }
+
+    for (const it of items) {
+      const prodSel = productSelect(it.id_produk);
+      const qtyInput = el('input', { type: 'number', min: 1, class: 'form-control', value: it.jumlah });
+      const priceInput = el('input', { type: 'number', min: 0, class: 'form-control', value: Number(it.harga_satuan || 0) });
+
+      tbody.appendChild(el('tr', null,
+        el('td', null, prodSel),
+        el('td', null, qtyInput),
+        el('td', null, priceInput),
+        el('td', null, rupiah(it.subtotal)),
+        el('td', null,
+          el('button', {
+            class: 'link-btn',
+            onclick: async () => {
+              try {
+                await API.put(`/api/pesanan/${ID_PESANAN}/items/${it.id_detail}`, {
+                  id_produk: prodSel.value,
+                  jumlah: Number(qtyInput.value),
+                  harga_satuan: Number(priceInput.value)
+                });
+                showSuccess('Detail pesanan diperbarui.');
+                await load();
+              } catch (err) { showError(err.message); }
+            }
+          }, 'Simpan'),
+          ' | ',
+          el('button', {
+            class: 'link-btn',
+            onclick: async () => {
+              if (!confirm('Hapus item ini?')) return;
+              try {
+                await API.del(`/api/pesanan/${ID_PESANAN}/items/${it.id_detail}`);
+                showSuccess('Item dihapus.');
+                await load();
+              } catch (err) { showError(err.message); }
+            }
+          }, 'Hapus')
+        )
+      ));
+    }
+  }
+
+  function renderPayment(bayar) {
+    const wrap = document.getElementById('bayarSection');
+    clear(wrap);
+    const pesanan = currentData ? currentData.pesanan : {};
+    const payment = bayar || {
+      metode: 'cod',
+      nama_penyedia: 'COD',
+      jumlah_bayar: pesanan.total_tagihan || 0,
+      tanggal_bayar: '',
+      status_bayar: 'pending'
+    };
+    const isEdit = Boolean(payment.id_pembayaran);
+
+    const form = el('form', { class: 'filter-bar vertical-form' });
+    const metode = metodeSelect(payment.metode);
+    const penyedia = el('input', { type: 'text', value: payment.nama_penyedia || '' });
+    const jumlah = el('input', { type: 'number', min: 0, value: Number(payment.jumlah_bayar || 0) });
+    const tanggal = el('input', { type: 'datetime-local', value: toDateTimeInput(payment.tanggal_bayar) });
+    const status = el('select');
+    fillStatusSelect(status, window.STATUS_BAYAR, payment.status_bayar);
+
+    form.appendChild(el('label', null, 'Metode:', metode));
+    form.appendChild(el('label', null, 'Penyedia:', penyedia));
+    form.appendChild(el('label', null, 'Jumlah:', jumlah));
+    form.appendChild(el('label', null, 'Tanggal:', tanggal));
+    form.appendChild(el('label', null, 'Status:', status));
+    form.appendChild(el('button', { type: 'submit', class: 'btn btn-primary' }, 'Simpan Pembayaran'));
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const body = {
+          metode: metode.value,
+          nama_penyedia: penyedia.value,
+          jumlah_bayar: Number(jumlah.value),
+          tanggal_bayar: tanggal.value || undefined,
+          status_bayar: status.value
+        };
+        if (isEdit) {
+          await API.put('/api/pembayaran/' + payment.id_pembayaran, body);
+        } else {
+          await API.post('/api/pembayaran', { id_pesanan: ID_PESANAN, ...body });
+        }
+        showSuccess('Pembayaran disimpan.');
+        await load();
+      } catch (err) { showError(err.message); }
+    });
+
+    const panelId = 'paymentOverridePanel';
+    wrap.appendChild(sectionHeader(
+      'Pembayaran',
+      isEdit ? 'Override nominal, metode, tanggal, dan status bayar.' : 'Belum ada pembayaran. Isi manual dari sini.',
+      panelId,
+      isEdit ? 'Edit Pembayaran' : 'Input Pembayaran',
+      isEdit ? 'Tutup Edit' : 'Tutup Input'
+    ));
+    const body = sectionBody(form);
+    body.id = panelId;
+    body.classList.add('is-hidden');
+    wrap.appendChild(body);
+    initPanelToggles(wrap);
+  }
+
+  function renderShipment(kirim) {
+    const wrap = document.getElementById('kirimSection');
+    clear(wrap);
+    const panelId = 'shipmentOverridePanel';
+    wrap.appendChild(sectionHeader(
+      'Pengiriman',
+      kirim ? 'Override kurir, resi, ongkir, dan status kirim.' : 'Belum ada pengiriman. Isi data kurir dari sini.',
+      panelId,
+      kirim ? 'Edit Pengiriman' : 'Input Pengiriman',
+      kirim ? 'Tutup Edit' : 'Tutup Input'
+    ));
+    if (!kurirOptions.length) {
+      const body = sectionBody(el('p', null, 'Belum ada master kurir aktif.'));
+      body.id = panelId;
+      body.classList.add('is-hidden');
+      wrap.appendChild(body);
+      initPanelToggles(wrap);
+      return;
+    }
+
+    const pesanan = currentData ? currentData.pesanan : {};
+    const shipment = kirim || {
+      id_kurir: kurirOptions[0].id_kurir,
+      layanan: '',
+      no_resi: '',
+      ongkos_kirim: pesanan.ongkos_kirim || 0,
+      total_berat_gram: 0,
+      tanggal_kirim: '',
+      estimasi_tiba: '',
+      tanggal_tiba: '',
+      status_kirim: 'diproses',
+      catatan: ''
+    };
+    const isEdit = Boolean(shipment.id_pengiriman);
+    const form = el('form', { class: 'filter-bar vertical-form' });
+    const kurir = kurirSelect(shipment.id_kurir);
+    const layanan = el('input', { type: 'text', value: shipment.layanan || '' });
+    const resi = el('input', { type: 'text', required: true, value: shipment.no_resi || '' });
+    const ongkir = el('input', { type: 'number', min: 0, value: Number(shipment.ongkos_kirim || 0) });
+    const berat = el('input', { type: 'number', min: 0, value: Number(shipment.total_berat_gram || 0) });
+    const tglKirim = el('input', { type: 'datetime-local', value: toDateTimeInput(shipment.tanggal_kirim) });
+    const estimasi = el('input', { type: 'date', required: true, value: toDateInput(shipment.estimasi_tiba) });
+    const tglTiba = el('input', { type: 'datetime-local', value: toDateTimeInput(shipment.tanggal_tiba) });
+    const status = el('select');
+    fillStatusSelect(status, window.STATUS_KIRIM, shipment.status_kirim);
+    const catatan = el('input', { type: 'text', value: shipment.catatan || '' });
+
+    form.appendChild(el('label', null, 'Kurir:', kurir));
+    form.appendChild(el('label', null, 'Layanan:', layanan));
+    form.appendChild(el('label', null, 'No. Resi:', resi));
+    form.appendChild(el('label', null, 'Ongkir:', ongkir));
+    form.appendChild(el('label', null, 'Berat:', berat));
+    form.appendChild(el('label', null, 'Tanggal Kirim:', tglKirim));
+    form.appendChild(el('label', null, 'Estimasi:', estimasi));
+    form.appendChild(el('label', null, 'Tanggal Tiba:', tglTiba));
+    form.appendChild(el('label', null, 'Status:', status));
+    form.appendChild(el('label', null, 'Catatan:', catatan));
+    form.appendChild(el('button', { type: 'submit', class: 'btn btn-primary' }, 'Simpan Pengiriman'));
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const body = {
+          id_kurir: kurir.value,
+          layanan: layanan.value,
+          no_resi: resi.value,
+          ongkos_kirim: Number(ongkir.value),
+          total_berat_gram: Number(berat.value),
+          tanggal_kirim: tglKirim.value || undefined,
+          estimasi_tiba: estimasi.value,
+          tanggal_tiba: tglTiba.value || undefined,
+          status_kirim: status.value,
+          catatan: catatan.value
+        };
+        if (isEdit) {
+          await API.put('/api/pengiriman/' + shipment.id_pengiriman, body);
+        } else {
+          await API.post('/api/pengiriman', { id_pesanan: ID_PESANAN, ...body });
+        }
+        showSuccess('Pengiriman disimpan.');
+        await load();
+      } catch (err) { showError(err.message); }
+    });
+
+    const body = sectionBody(form);
+    body.id = panelId;
+    body.classList.add('is-hidden');
+    if (isEdit && shipment.no_resi) {
+      body.appendChild(el('p', null, el('a', { href: '/pengiriman?q=' + encodeURIComponent(shipment.no_resi) }, 'Lacak paket')));
+    }
+    wrap.appendChild(body);
+    initPanelToggles(wrap);
+  }
+
+  async function loadOptions() {
+    orderOptions = await API.get('/api/pesanan/options');
+    kurirOptions = await API.get('/api/kurir');
+    renderAddItemForm();
+  }
 
   async function load() {
     try {
-      const data = await API.get('/api/pesanan/' + ID_PESANAN);
-      const { pesanan, items, bayar, kirim } = data;
+      currentData = await API.get('/api/pesanan/' + ID_PESANAN);
+      const { pesanan, items, bayar, kirim } = currentData;
 
       document.getElementById('orderTitle').textContent = '#TK-' + pad(pesanan.id_pesanan, 4);
       document.getElementById('orderMeta').innerHTML =
         formatTanggalJam(pesanan.tanggal_pesan) +
         ' - Status: <strong>' + statusLabel(window.STATUS_PESANAN, pesanan.status_pesanan) + '</strong>';
 
-      const tbody = document.getElementById('items');
-      clear(tbody);
-      for (const it of items) {
-        tbody.appendChild(el('tr', null,
-          el('td', null, it.nama_produk),
-          el('td', null, String(it.jumlah)),
-          el('td', null, rupiah(it.harga_satuan)),
-          el('td', null, rupiah(it.subtotal))
-        ));
-      }
+      renderOrderForm(pesanan);
+      renderItems(items);
 
       document.getElementById('totals').innerHTML = `
         <li>Subtotal Produk: <strong>${rupiah(pesanan.total_harga)}</strong></li>
@@ -68,50 +474,47 @@
         <li>Alamat: ${pesanan.alamat_lengkap}, ${pesanan.kota}, ${pesanan.provinsi} ${pesanan.kode_pos}</li>
       `;
 
-      if (bayar) {
-        document.getElementById('bayarSection').innerHTML = `
-          <h3>Pembayaran</h3>
-          <ul class="kv-list">
-            <li>Metode: ${metodeLabel(bayar.metode, bayar.nama_penyedia)}</li>
-            <li>Jumlah Bayar: ${rupiah(bayar.jumlah_bayar)}</li>
-            <li>Tanggal: ${bayar.tanggal_bayar ? formatTanggalJam(bayar.tanggal_bayar) : '-'}</li>
-            <li>Status: ${statusLabel(window.STATUS_BAYAR, bayar.status_bayar)}</li>
-          </ul>
-        `;
-      }
-
-      if (kirim) {
-        document.getElementById('kirimSection').innerHTML = `
-          <h3>Pengiriman</h3>
-          <ul class="kv-list">
-            <li>Kurir: ${kirim.kode_kurir} ${kirim.layanan || ''}</li>
-            <li>No. Resi: ${kirim.no_resi}</li>
-            <li>Status: ${statusLabel(window.STATUS_KIRIM, kirim.status_kirim)}</li>
-          </ul>
-          <p><a href="/pengiriman?q=${encodeURIComponent(kirim.no_resi)}">Lacak paket</a></p>
-        `;
-      }
-
-      const sel = document.getElementById('statusSelect');
-      clear(sel);
-      for (const [key, label] of Object.entries(window.STATUS_PESANAN)) {
-        const opt = el('option', { value: key }, label);
-        if (pesanan.status_pesanan === key) opt.selected = true;
-        sel.appendChild(opt);
-      }
+      renderPayment(bayar);
+      renderShipment(kirim);
     } catch (err) { showError(err.message); }
   }
 
-  document.getElementById('statusForm').addEventListener('submit', async (e) => {
+  document.getElementById('addProduk').addEventListener('change', (e) => {
+    const opt = e.target.options[e.target.selectedIndex];
+    document.getElementById('addHarga').value = opt ? opt.getAttribute('data-harga') || 0 : 0;
+  });
+
+  document.getElementById('orderForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
-      await API.patch('/api/pesanan/' + ID_PESANAN + '/status', {
-        status: document.getElementById('statusSelect').value
+      await API.put('/api/pesanan/' + ID_PESANAN, {
+        id_alamat: document.getElementById('editAlamat').value,
+        tanggal_pesan: document.getElementById('editTanggal').value || undefined,
+        ongkos_kirim: Number(document.getElementById('editOngkir').value),
+        diskon: Number(document.getElementById('editDiskon').value),
+        status_pesanan: document.getElementById('editStatus').value
       });
-      showSuccess('Status pesanan diperbarui.');
-      load();
+      showSuccess('Pesanan diperbarui.');
+      await load();
     } catch (err) { showError(err.message); }
   });
 
-  load();
+  document.getElementById('addItemForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await API.post('/api/pesanan/' + ID_PESANAN + '/items', {
+        id_produk: document.getElementById('addProduk').value,
+        jumlah: Number(document.getElementById('addJumlah').value),
+        harga_satuan: Number(document.getElementById('addHarga').value)
+      });
+      document.getElementById('addJumlah').value = 1;
+      showSuccess('Item ditambahkan.');
+      await load();
+    } catch (err) { showError(err.message); }
+  });
+
+  (async () => {
+    await loadOptions();
+    await load();
+  })();
 </script>

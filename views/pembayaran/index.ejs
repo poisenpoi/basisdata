@@ -1,44 +1,124 @@
-<form id="filterForm" class="filter-bar">
-  <label>
-    Status:
-    <select id="fStatus">
-      <option value="">Semua</option>
-      <option value="pending">Pending</option>
-      <option value="berhasil">Berhasil</option>
-      <option value="gagal">Gagal</option>
-      <option value="refund">Refund</option>
-    </select>
-  </label>
+<div class="page-stack">
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <h3>Input Pembayaran</h3>
+        <p>Catat pembayaran untuk pesanan yang belum punya data bayar.</p>
+      </div>
+      <div class="section-actions">
+        <button type="button" class="btn" data-toggle-panel="addPaymentPanel" data-closed-label="Input Pembayaran" data-open-label="Tutup Input">Input Pembayaran</button>
+      </div>
+    </div>
+    <div class="section-body input-panel is-hidden" id="addPaymentPanel">
+      <form id="addForm" class="filter-bar">
+        <label>
+          Pesanan:
+          <select id="idPesanan" required></select>
+        </label>
+        <label>
+          Metode:
+          <select id="metode" required>
+            <option value="transfer_bank">Transfer Bank</option>
+            <option value="e_wallet">E-Wallet</option>
+            <option value="cod">COD</option>
+          </select>
+        </label>
+        <label>
+          Penyedia:
+          <input type="text" id="penyedia" placeholder="BCA, OVO, COD...">
+        </label>
+        <label>
+          Jumlah:
+          <input type="number" id="jumlahBayar" min="0" required>
+        </label>
+        <label>
+          Tanggal:
+          <input type="datetime-local" id="tanggalBayar">
+        </label>
+        <label>
+          Status:
+          <select id="statusBayar">
+            <option value="pending">Pending</option>
+            <option value="berhasil">Berhasil</option>
+            <option value="gagal">Gagal</option>
+            <option value="refund">Refund</option>
+          </select>
+        </label>
+        <button type="submit" class="btn btn-primary">Tambah Pembayaran</button>
+      </form>
+    </div>
+  </section>
 
-  <label>
-    Metode:
-    <select id="fMetode">
-      <option value="">Semua</option>
-      <option value="transfer_bank">Transfer Bank</option>
-      <option value="e_wallet">E-Wallet</option>
-      <option value="cod">COD</option>
-    </select>
-  </label>
-</form>
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <h3>Daftar Pembayaran</h3>
+        <p>Filter dan koreksi pembayaran manual.</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <form id="filterForm" class="filter-bar">
+        <label>
+          Status:
+          <select id="fStatus">
+            <option value="">Semua</option>
+            <option value="pending">Pending</option>
+            <option value="berhasil">Berhasil</option>
+            <option value="gagal">Gagal</option>
+            <option value="refund">Refund</option>
+          </select>
+        </label>
 
-<table class="table">
-  <thead>
-    <tr>
-      <th>ID Pesanan</th>
-      <th>Pelanggan</th>
-      <th>Metode</th>
-      <th>Jumlah</th>
-      <th>Tanggal Bayar</th>
-      <th>Status</th>
-    </tr>
-  </thead>
-  <tbody id="rows">
-    <tr><td colspan="6">Memuat...</td></tr>
-  </tbody>
-</table>
+        <label>
+          Metode:
+          <select id="fMetode">
+            <option value="">Semua</option>
+            <option value="transfer_bank">Transfer Bank</option>
+            <option value="e_wallet">E-Wallet</option>
+            <option value="cod">COD</option>
+          </select>
+        </label>
+      </form>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID Pesanan</th>
+              <th>Pelanggan</th>
+              <th>Metode</th>
+              <th>Jumlah</th>
+              <th>Tanggal Bayar</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <tr><td colspan="7">Memuat...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
 
 <script>
   function pad(n, w) { return String(n).padStart(w, '0'); }
+  let orderTotals = {};
+
+  async function loadOptions() {
+    const out = await API.get('/api/pembayaran/options');
+    const sel = document.getElementById('idPesanan');
+    clear(sel);
+    orderTotals = {};
+    sel.appendChild(el('option', { value: '' }, 'Pilih pesanan'));
+    for (const o of out.orders) {
+      orderTotals[o.id_pesanan] = o.total_tagihan;
+      sel.appendChild(el('option', { value: o.id_pesanan },
+        `#TK-${pad(o.id_pesanan, 4)} - ${o.pelanggan_nama} - ${rupiah(o.total_tagihan)}`
+      ));
+    }
+  }
 
   async function load() {
     const params = new URLSearchParams();
@@ -51,7 +131,7 @@
       const tbody = document.getElementById('rows');
       clear(tbody);
       if (!rows.length) {
-        tbody.appendChild(el('tr', null, el('td', { colspan: 6 }, 'Tidak ada pembayaran.')));
+        tbody.appendChild(el('tr', null, el('td', { colspan: 7 }, 'Tidak ada pembayaran.')));
         return;
       }
       for (const b of rows) {
@@ -66,13 +146,75 @@
           el('td', null, metodeLabel(b.metode, b.nama_penyedia)),
           el('td', null, rupiah(b.jumlah_bayar)),
           el('td', null, b.tanggal_bayar ? formatTanggalJam(b.tanggal_bayar) : '-'),
-          el('td', null, statusLabel(window.STATUS_BAYAR, b.status_bayar))
+          el('td', null, statusLabel(window.STATUS_BAYAR, b.status_bayar)),
+          el('td', null,
+            el('button', {
+              class: 'link-btn',
+              onclick: async () => {
+                const metode = prompt('Metode (transfer_bank/e_wallet/cod):', b.metode);
+                if (!metode) return;
+                const penyedia = prompt('Penyedia:', b.nama_penyedia || '') || '';
+                const jumlah = prompt('Jumlah bayar:', b.jumlah_bayar);
+                if (jumlah == null) return;
+                const tanggal = prompt('Tanggal bayar (YYYY-MM-DD HH:mm:ss, kosong jika belum bayar):', b.tanggal_bayar || '') || '';
+                const status = prompt('Status (pending/berhasil/gagal/refund):', b.status_bayar) || b.status_bayar;
+                try {
+                  await API.put('/api/pembayaran/' + b.id_pembayaran, {
+                    metode,
+                    nama_penyedia: penyedia,
+                    jumlah_bayar: Number(jumlah),
+                    tanggal_bayar: tanggal,
+                    status_bayar: status
+                  });
+                  showSuccess('Pembayaran diperbarui.');
+                  load();
+                } catch (err) { showError(err.message); }
+              }
+            }, 'Edit'),
+            ' | ',
+            el('button', {
+              class: 'link-btn',
+              onclick: async () => {
+                if (!confirm('Hapus pembayaran ini?')) return;
+                try {
+                  await API.del('/api/pembayaran/' + b.id_pembayaran);
+                  showSuccess('Pembayaran dihapus.');
+                  await loadOptions();
+                  load();
+                } catch (err) { showError(err.message); }
+              }
+            }, 'Hapus')
+          )
         ));
       }
     } catch (err) { showError(err.message); }
   }
 
+  document.getElementById('idPesanan').addEventListener('change', (e) => {
+    const total = orderTotals[e.target.value];
+    if (total != null) document.getElementById('jumlahBayar').value = Number(total);
+  });
+
+  document.getElementById('addForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await API.post('/api/pembayaran', {
+        id_pesanan: document.getElementById('idPesanan').value,
+        metode: document.getElementById('metode').value,
+        nama_penyedia: document.getElementById('penyedia').value,
+        jumlah_bayar: Number(document.getElementById('jumlahBayar').value),
+        tanggal_bayar: document.getElementById('tanggalBayar').value || undefined,
+        status_bayar: document.getElementById('statusBayar').value
+      });
+      e.target.reset();
+      showSuccess('Pembayaran ditambahkan.');
+      await loadOptions();
+      load();
+    } catch (err) { showError(err.message); }
+  });
+
   document.getElementById('fStatus').addEventListener('change', load);
   document.getElementById('fMetode').addEventListener('change', load);
+  loadOptions().catch(err => showError(err.message));
   load();
 </script>

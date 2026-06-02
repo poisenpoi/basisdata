@@ -1,62 +1,87 @@
-<h3>Ringkasan Produk</h3>
-<ul class="kv-list" id="productCounts">
-  <li>Memuat...</li>
-</ul>
+<div class="page-stack">
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <h3>Ringkasan Produk</h3>
+        <p>Status stok dan total kategori.</p>
+      </div>
+      <div class="section-actions">
+        <a href="/produk/baru" class="btn btn-primary">Tambah Produk</a>
+      </div>
+    </div>
+    <div class="section-body">
+      <ul class="kv-list summary-list" id="productCounts">
+        <li>Memuat...</li>
+      </ul>
+    </div>
+  </section>
 
-<form id="filterForm">
-  <div class="filter-bar">
-    <label>
-      Kategori:
-      <select name="kategori" id="fKategori">
-        <option value="">Semua</option>
-      </select>
-    </label>
-    <label>
-      Stok:
-      <select name="stok" id="fStok">
-        <option value="">Semua</option>
-        <option value="tersedia">Tersedia</option>
-        <option value="rendah">Stok Rendah</option>
-        <option value="habis">Habis</option>
-      </select>
-    </label>
-    <label>
-      Urutkan:
-      <select name="sort" id="fSort">
-        <option value="">Default</option>
-        <option value="nama_asc">Nama A-Z</option>
-        <option value="termurah">Harga Termurah</option>
-        <option value="termahal">Harga Termahal</option>
-        <option value="stok_rendah">Stok Rendah</option>
-      </select>
-    </label>
-    <label>
-      Cari:
-      <input type="text" name="q" id="fQ" placeholder="Nama produk...">
-    </label>
-    <button type="submit" class="btn">Terapkan</button>
-    <a href="/produk/baru" class="btn btn-primary">Tambah Produk</a>
-  </div>
-</form>
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <h3>Daftar Produk</h3>
+        <p>Filter produk berdasarkan kategori, stok, dan nama.</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <form id="filterForm">
+        <div class="filter-bar">
+          <label>
+            Kategori:
+            <select name="kategori" id="fKategori">
+              <option value="">Semua</option>
+            </select>
+          </label>
+          <label>
+            Stok:
+            <select name="stok" id="fStok">
+              <option value="">Semua</option>
+              <option value="tersedia">Tersedia</option>
+              <option value="rendah">Stok Rendah</option>
+              <option value="habis">Habis</option>
+            </select>
+          </label>
+          <label>
+            Urutkan:
+            <select name="sort" id="fSort">
+              <option value="">Default</option>
+              <option value="nama_asc">Nama A-Z</option>
+              <option value="termurah">Harga Termurah</option>
+              <option value="termahal">Harga Termahal</option>
+              <option value="stok_rendah">Stok Rendah</option>
+            </select>
+          </label>
+          <label>
+            Cari:
+            <input type="text" name="q" id="fQ" placeholder="Nama produk...">
+          </label>
+          <button type="submit" class="btn">Terapkan</button>
+        </div>
+      </form>
 
-<table class="table">
-  <thead>
-    <tr>
-      <th>Nama Produk</th>
-      <th>Kategori</th>
-      <th>Harga</th>
-      <th>Stok</th>
-      <th>Berat</th>
-      <th>Status</th>
-      <th>Aksi</th>
-    </tr>
-  </thead>
-  <tbody id="productRows">
-    <tr><td colspan="7">Memuat...</td></tr>
-  </tbody>
-</table>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Nama Produk</th>
+              <th>Kategori</th>
+              <th>Harga</th>
+              <th>Stok</th>
+              <th>Berat</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="productRows">
+            <tr><td colspan="7">Memuat...</td></tr>
+          </tbody>
+        </table>
+      </div>
 
-<p class="text-muted" id="resultInfo"></p>
+      <p class="text-muted" id="resultInfo"></p>
+    </div>
+  </section>
+</div>
 
 <script>
   async function loadKategori() {
@@ -85,7 +110,7 @@
       const c = out.counts;
       document.getElementById('productCounts').innerHTML = `
         <li>Total Produk: <strong>${c.total_produk}</strong></li>
-        <li>Kategori Aktif: <strong>${c.kategori_aktif}</strong></li>
+        <li>Total Kategori: <strong>${c.kategori_aktif}</strong></li>
         <li>Stok Rendah: <strong>${c.stok_rendah}</strong></li>
         <li>Stok Habis: <strong>${c.stok_habis}</strong></li>
       `;

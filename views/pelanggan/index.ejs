@@ -1,36 +1,108 @@
-<form id="filterForm" class="filter-bar">
-  <label>
-    Cari:
-    <input type="text" id="fQ" placeholder="Nama, email, no. HP...">
-  </label>
-  <label>
-    Status:
-    <select id="fStatus">
-      <option value="">Semua</option>
-      <option value="aktif">Aktif</option>
-      <option value="nonaktif">Nonaktif</option>
-      <option value="diblokir">Diblokir</option>
-    </select>
-  </label>
-  <button type="submit" class="btn">Filter</button>
-</form>
+<div class="page-stack">
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <h3>Input Pelanggan</h3>
+        <p>Tambah pelanggan baru beserta alamat awal jika diperlukan.</p>
+      </div>
+      <div class="section-actions">
+        <button type="button" class="btn" data-toggle-panel="addCustomerPanel" data-closed-label="Input Pelanggan" data-open-label="Tutup Input">Input Pelanggan</button>
+      </div>
+    </div>
+    <div class="section-body input-panel is-hidden" id="addCustomerPanel">
+      <form id="addForm" class="filter-bar">
+        <label>
+          Nama:
+          <input type="text" id="nama" required>
+        </label>
+        <label>
+          Email:
+          <input type="email" id="email" required>
+        </label>
+        <label>
+          No. HP:
+          <input type="text" id="noHp" required>
+        </label>
+        <label>
+          Password:
+          <input type="text" id="password" value="password123">
+        </label>
+        <label>
+          Status:
+          <select id="statusAkun">
+            <option value="aktif">Aktif</option>
+            <option value="nonaktif">Nonaktif</option>
+            <option value="diblokir">Diblokir</option>
+          </select>
+        </label>
+        <label>
+          Alamat:
+          <input type="text" id="alamat" placeholder="Opsional">
+        </label>
+        <label>
+          Kota:
+          <input type="text" id="kota" placeholder="Opsional">
+        </label>
+        <label>
+          Provinsi:
+          <input type="text" id="provinsi" placeholder="Opsional">
+        </label>
+        <label>
+          Kode Pos:
+          <input type="text" id="kodePos" placeholder="Opsional">
+        </label>
+        <button type="submit" class="btn btn-primary">Tambah Pelanggan</button>
+      </form>
+    </div>
+  </section>
 
-<table class="table">
-  <thead>
-    <tr>
-      <th>Nama</th>
-      <th>Email</th>
-      <th>No. HP</th>
-      <th>Tanggal Daftar</th>
-      <th>Total Pesanan</th>
-      <th>Total Belanja</th>
-      <th>Status</th>
-    </tr>
-  </thead>
-  <tbody id="rows">
-    <tr><td colspan="7">Memuat...</td></tr>
-  </tbody>
-</table>
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <h3>Daftar Pelanggan</h3>
+        <p>Cari, filter status, dan koreksi data pelanggan.</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <form id="filterForm" class="filter-bar">
+        <label>
+          Cari:
+          <input type="text" id="fQ" placeholder="Nama, email, no. HP...">
+        </label>
+        <label>
+          Status:
+          <select id="fStatus">
+            <option value="">Semua</option>
+            <option value="aktif">Aktif</option>
+            <option value="nonaktif">Nonaktif</option>
+            <option value="diblokir">Diblokir</option>
+          </select>
+        </label>
+        <button type="submit" class="btn">Filter</button>
+      </form>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Nama</th>
+              <th>Email</th>
+              <th>No. HP</th>
+              <th>Tanggal Daftar</th>
+              <th>Total Pesanan</th>
+              <th>Total Belanja</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <tr><td colspan="8">Memuat...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
 
 <script>
   const STATUS_AKUN = {
@@ -50,10 +122,47 @@
       const tbody = document.getElementById('rows');
       clear(tbody);
       if (!rows.length) {
-        tbody.appendChild(el('tr', null, el('td', { colspan: 7 }, 'Tidak ada pelanggan.')));
+        tbody.appendChild(el('tr', null, el('td', { colspan: 8 }, 'Tidak ada pelanggan.')));
         return;
       }
       for (const p of rows) {
+        const editBtn = el('button', {
+          class: 'link-btn',
+          onclick: async () => {
+            const nama = prompt('Nama pelanggan:', p.nama);
+            if (!nama) return;
+            const email = prompt('Email:', p.email);
+            if (!email) return;
+            const noHp = prompt('No. HP:', p.no_hp);
+            if (!noHp) return;
+            const status = prompt('Status akun (aktif/nonaktif/diblokir):', p.status_akun) || p.status_akun;
+            const password = prompt('Password baru (kosongkan jika tidak diubah):', '');
+            try {
+              await API.put('/api/pelanggan/' + p.id_pelanggan, {
+                nama,
+                email,
+                no_hp: noHp,
+                status_akun: status,
+                password
+              });
+              showSuccess('Pelanggan diperbarui.');
+              load();
+            } catch (err) { showError(err.message); }
+          }
+        }, 'Edit');
+
+        const delBtn = el('button', {
+          class: 'link-btn',
+          onclick: async () => {
+            if (!confirm('Hapus pelanggan ini?')) return;
+            try {
+              await API.del('/api/pelanggan/' + p.id_pelanggan);
+              showSuccess('Pelanggan dihapus.');
+              load();
+            } catch (err) { showError(err.message); }
+          }
+        }, 'Hapus');
+
         tbody.appendChild(el('tr', null,
           el('td', null, p.nama),
           el('td', null, p.email),
@@ -61,11 +170,33 @@
           el('td', null, formatTanggal(p.tanggal_daftar)),
           el('td', null, String(p.total_pesanan)),
           el('td', null, rupiah(p.total_belanja)),
-          el('td', null, STATUS_AKUN[p.status_akun] || p.status_akun)
+          el('td', null, STATUS_AKUN[p.status_akun] || p.status_akun),
+          el('td', null, editBtn, ' | ', delBtn)
         ));
       }
     } catch (err) { showError(err.message); }
   }
+
+  document.getElementById('addForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await API.post('/api/pelanggan', {
+        nama: document.getElementById('nama').value,
+        email: document.getElementById('email').value,
+        no_hp: document.getElementById('noHp').value,
+        password: document.getElementById('password').value,
+        status_akun: document.getElementById('statusAkun').value,
+        alamat_lengkap: document.getElementById('alamat').value,
+        kota: document.getElementById('kota').value,
+        provinsi: document.getElementById('provinsi').value,
+        kode_pos: document.getElementById('kodePos').value
+      });
+      e.target.reset();
+      document.getElementById('password').value = 'password123';
+      showSuccess('Pelanggan ditambahkan.');
+      load();
+    } catch (err) { showError(err.message); }
+  });
 
   document.getElementById('filterForm').addEventListener('submit', (e) => {
     e.preventDefault();

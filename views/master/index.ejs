@@ -1,0 +1,216 @@
+<div class="page-split equal-split">
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <h3>Kategori Produk</h3>
+        <p>Master kategori untuk produk.</p>
+      </div>
+      <div class="section-actions">
+        <button type="button" class="btn" data-toggle-panel="kategoriInputPanel" data-closed-label="Input Kategori" data-open-label="Tutup Input">Input Kategori</button>
+      </div>
+    </div>
+    <div class="section-body">
+      <div id="kategoriInputPanel" class="is-hidden">
+        <form id="kategoriForm" class="filter-bar input-grid">
+          <label>
+            Nama Kategori:
+            <input type="text" id="katNama" required>
+          </label>
+          <label>
+            Deskripsi:
+            <input type="text" id="katDeskripsi">
+          </label>
+          <button type="submit" class="btn btn-primary">Tambah Kategori</button>
+        </form>
+      </div>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nama</th>
+            <th>Deskripsi</th>
+            <th>Total Produk</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="kategoriRows">
+          <tr><td colspan="4">Memuat...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section control-panel">
+    <div class="section-header">
+      <div>
+        <h3>Kurir</h3>
+        <p>Master ekspedisi yang bisa dipakai pengiriman.</p>
+      </div>
+      <div class="section-actions">
+        <button type="button" class="btn" data-toggle-panel="kurirInputPanel" data-closed-label="Input Kurir" data-open-label="Tutup Input">Input Kurir</button>
+      </div>
+    </div>
+    <div class="section-body">
+      <div id="kurirInputPanel" class="is-hidden">
+        <form id="kurirForm" class="filter-bar vertical-form">
+          <label>
+            Kode:
+            <input type="text" id="kurirKode" required placeholder="JNE">
+          </label>
+          <label>
+            Nama Kurir:
+            <input type="text" id="kurirNama" required>
+          </label>
+          <label>
+            Status:
+            <select id="kurirActive">
+              <option value="1">Aktif</option>
+              <option value="0">Nonaktif</option>
+            </select>
+          </label>
+          <button type="submit" class="btn btn-primary">Tambah Kurir</button>
+        </form>
+      </div>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Kode</th>
+            <th>Nama</th>
+            <th>Status</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="kurirRows">
+          <tr><td colspan="4">Memuat...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+  async function loadKategori() {
+    const rows = await API.get('/api/kategori');
+    const tbody = document.getElementById('kategoriRows');
+    clear(tbody);
+    if (!rows.length) {
+      tbody.appendChild(el('tr', null, el('td', { colspan: 4 }, 'Belum ada kategori.')));
+      return;
+    }
+    for (const k of rows) {
+      tbody.appendChild(el('tr', null,
+        el('td', null, k.nama_kategori),
+        el('td', null, k.deskripsi || '-'),
+        el('td', null, String(k.total || 0)),
+        el('td', null,
+          el('button', {
+            class: 'link-btn',
+            onclick: async () => {
+              const nama = prompt('Nama kategori:', k.nama_kategori);
+              if (!nama) return;
+              const deskripsi = prompt('Deskripsi:', k.deskripsi || '') || '';
+              try {
+                await API.put('/api/kategori/' + k.id_kategori, { nama_kategori: nama, deskripsi });
+                showSuccess('Kategori diperbarui.');
+                loadKategori();
+              } catch (err) { showError(err.message); }
+            }
+          }, 'Edit'),
+          ' | ',
+          el('button', {
+            class: 'link-btn',
+            onclick: async () => {
+              if (!confirm('Hapus kategori ini?')) return;
+              try {
+                await API.del('/api/kategori/' + k.id_kategori);
+                showSuccess('Kategori dihapus.');
+                loadKategori();
+              } catch (err) { showError(err.message); }
+            }
+          }, 'Hapus')
+        )
+      ));
+    }
+  }
+
+  async function loadKurir() {
+    const rows = await API.get('/api/kurir');
+    const tbody = document.getElementById('kurirRows');
+    clear(tbody);
+    if (!rows.length) {
+      tbody.appendChild(el('tr', null, el('td', { colspan: 4 }, 'Belum ada kurir.')));
+      return;
+    }
+    for (const k of rows) {
+      tbody.appendChild(el('tr', null,
+        el('td', null, k.kode_kurir),
+        el('td', null, k.nama_kurir),
+        el('td', null, k.is_active ? 'Aktif' : 'Nonaktif'),
+        el('td', null,
+          el('button', {
+            class: 'link-btn',
+            onclick: async () => {
+              const kode = prompt('Kode kurir:', k.kode_kurir);
+              if (!kode) return;
+              const nama = prompt('Nama kurir:', k.nama_kurir);
+              if (!nama) return;
+              const aktif = confirm('Aktifkan kurir ini?');
+              try {
+                await API.put('/api/kurir/' + k.id_kurir, {
+                  kode_kurir: kode,
+                  nama_kurir: nama,
+                  is_active: aktif ? 1 : 0
+                });
+                showSuccess('Kurir diperbarui.');
+                loadKurir();
+              } catch (err) { showError(err.message); }
+            }
+          }, 'Edit'),
+          ' | ',
+          el('button', {
+            class: 'link-btn',
+            onclick: async () => {
+              if (!confirm('Hapus kurir ini?')) return;
+              try {
+                await API.del('/api/kurir/' + k.id_kurir);
+                showSuccess('Kurir dihapus.');
+                loadKurir();
+              } catch (err) { showError(err.message); }
+            }
+          }, 'Hapus')
+        )
+      ));
+    }
+  }
+
+  document.getElementById('kategoriForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await API.post('/api/kategori', {
+        nama_kategori: document.getElementById('katNama').value,
+        deskripsi: document.getElementById('katDeskripsi').value
+      });
+      e.target.reset();
+      showSuccess('Kategori ditambahkan.');
+      loadKategori();
+    } catch (err) { showError(err.message); }
+  });
+
+  document.getElementById('kurirForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await API.post('/api/kurir', {
+        kode_kurir: document.getElementById('kurirKode').value,
+        nama_kurir: document.getElementById('kurirNama').value,
+        is_active: Number(document.getElementById('kurirActive').value)
+      });
+      e.target.reset();
+      showSuccess('Kurir ditambahkan.');
+      loadKurir();
+    } catch (err) { showError(err.message); }
+  });
+
+  loadKategori().catch(err => showError(err.message));
+  loadKurir().catch(err => showError(err.message));
+</script>

@@ -92,4 +92,12 @@ router.get('/pelanggan', requireAuth, (req, res) => {
   });
 });
 
+router.get('/master', requireAuth, (req, res) => {
+  res.render('master/index', {
+    title: 'Master Data - TokoKita',
+    pageTitle: 'Master Data',
+    breadcrumb: 'Home / Master Data'
+  });
+});
+
 module.exports = router;

@@ -1,37 +1,239 @@
-<h3>Lacak Paket</h3>
-<form id="trackForm" class="filter-bar">
-  <label>
-    Kurir:
-    <select id="fKurir">
-      <option value="">Semua</option>
-    </select>
-  </label>
-  <label>
-    No. Resi:
-    <input type="text" id="fQ" placeholder="contoh: JNE00123456789">
-  </label>
-  <button type="submit" class="btn">Cari</button>
-</form>
+<div class="page-stack">
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <h3>Input Pengiriman</h3>
+        <p>Buat data kirim untuk pesanan yang belum punya pengiriman.</p>
+      </div>
+      <div class="section-actions">
+        <button type="button" class="btn" data-toggle-panel="addShipmentPanel" data-closed-label="Input Pengiriman" data-open-label="Tutup Input">Input Pengiriman</button>
+      </div>
+    </div>
+    <div class="section-body input-panel is-hidden" id="addShipmentPanel">
+      <form id="addShipmentForm" class="filter-bar">
+        <label>
+          Pesanan:
+          <select id="shipOrder" required></select>
+        </label>
+        <label>
+          Kurir:
+          <select id="shipKurir" required></select>
+        </label>
+        <label>
+          Layanan:
+          <input type="text" id="shipLayanan" placeholder="REG, Express...">
+        </label>
+        <label>
+          No. Resi:
+          <input type="text" id="shipResi" required>
+        </label>
+        <label>
+          Ongkir:
+          <input type="number" id="shipOngkir" min="0" value="0">
+        </label>
+        <label>
+          Berat (gram):
+          <input type="number" id="shipBerat" min="0" value="0">
+        </label>
+        <label>
+          Tanggal Kirim:
+          <input type="datetime-local" id="shipTanggal">
+        </label>
+        <label>
+          Estimasi Tiba:
+          <input type="date" id="shipEstimasi" required>
+        </label>
+        <label>
+          Status:
+          <select id="shipStatus">
+            <option value="diproses">Diproses</option>
+            <option value="dalam_perjalanan">Dalam Perjalanan</option>
+            <option value="tiba_di_kota">Tiba di Kota</option>
+            <option value="out_for_delivery">Sedang Diantar</option>
+            <option value="terkirim">Terkirim</option>
+            <option value="gagal_kirim">Gagal</option>
+            <option value="retur">Retur</option>
+          </select>
+        </label>
+        <label>
+          Riwayat Awal:
+          <input type="text" id="shipRiwayat" placeholder="Opsional">
+        </label>
+        <button type="submit" class="btn btn-primary">Tambah Pengiriman</button>
+      </form>
+    </div>
+  </section>
 
-<h3>Ringkasan per Kurir</h3>
-<table class="table">
-  <thead>
-    <tr>
-      <th>Kurir</th>
-      <th>Total Paket</th>
-      <th>Terkirim</th>
-      <th>Dalam Perjalanan</th>
-    </tr>
-  </thead>
-  <tbody id="kurirRows">
-    <tr><td colspan="4">Memuat...</td></tr>
-  </tbody>
-</table>
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <h3>Daftar Pengiriman</h3>
+        <p>Pengiriman aktif dan data resi yang sudah tersimpan.</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Pesanan</th>
+              <th>Pelanggan</th>
+              <th>Kurir</th>
+              <th>Resi</th>
+              <th>Tanggal</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="shipmentRows">
+            <tr><td colspan="7">Memuat...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 
-<div id="trackingDetail"></div>
+  <div class="page-split equal-split">
+    <section class="section control-panel">
+      <div class="section-header">
+        <div>
+          <h3>Lacak Paket</h3>
+          <p>Cari resi atau tampilkan paket aktif per kurir.</p>
+        </div>
+      </div>
+      <div class="section-body">
+        <form id="trackForm" class="filter-bar vertical-form">
+          <label>
+            Kurir:
+            <select id="fKurir">
+              <option value="">Semua</option>
+            </select>
+          </label>
+          <label>
+            No. Resi:
+            <input type="text" id="fQ" placeholder="contoh: JNE00123456789">
+          </label>
+          <button type="submit" class="btn">Cari</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <h3>Ringkasan Kurir</h3>
+          <p>Total paket per kurir.</p>
+        </div>
+      </div>
+      <div class="section-body">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Kurir</th>
+              <th>Total Paket</th>
+              <th>Terkirim</th>
+              <th>Dalam Perjalanan</th>
+            </tr>
+          </thead>
+          <tbody id="kurirRows">
+            <tr><td colspan="4">Memuat...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div id="trackingDetail"></div>
+</div>
 
 <script>
   function pad(n, w) { return String(n).padStart(w, '0'); }
+
+  async function loadShipmentOptions() {
+    const out = await API.get('/api/pengiriman/options');
+    const orderSel = document.getElementById('shipOrder');
+    const kurirSel = document.getElementById('shipKurir');
+    clear(orderSel);
+    clear(kurirSel);
+
+    orderSel.appendChild(el('option', { value: '' }, 'Pilih pesanan'));
+    for (const o of out.orders) {
+      orderSel.appendChild(el('option', { value: o.id_pesanan },
+        `#TK-${pad(o.id_pesanan, 4)} - ${o.pelanggan_nama} - ${rupiah(o.total_tagihan)}`
+      ));
+    }
+
+    kurirSel.appendChild(el('option', { value: '' }, 'Pilih kurir'));
+    for (const k of out.kurir) {
+      kurirSel.appendChild(el('option', { value: k.id_kurir }, `${k.kode_kurir} - ${k.nama_kurir}`));
+    }
+  }
+
+  async function loadShipments() {
+    const rows = await API.get('/api/pengiriman');
+    const tbody = document.getElementById('shipmentRows');
+    clear(tbody);
+    if (!rows.length) {
+      tbody.appendChild(el('tr', null, el('td', { colspan: 7 }, 'Belum ada pengiriman.')));
+      return;
+    }
+    for (const s of rows) {
+      tbody.appendChild(el('tr', null,
+        el('td', null, el('a', { href: '/pesanan/' + s.id_pesanan }, '#TK-' + pad(s.id_pesanan, 4))),
+        el('td', null, s.pelanggan_nama),
+        el('td', null, `${s.kode_kurir} ${s.layanan || ''}`),
+        el('td', null, s.no_resi),
+        el('td', null, formatTanggal(s.tanggal_kirim)),
+        el('td', null, statusLabel(window.STATUS_KIRIM, s.status_kirim)),
+        el('td', null,
+          el('button', {
+            class: 'link-btn',
+            onclick: async () => {
+              const resi = prompt('No. resi:', s.no_resi);
+              if (!resi) return;
+              const layanan = prompt('Layanan:', s.layanan || '') || '';
+              const status = prompt('Status kirim:', s.status_kirim) || s.status_kirim;
+              const ongkir = prompt('Ongkir:', s.ongkos_kirim) || 0;
+              const berat = prompt('Berat gram:', s.total_berat_gram) || 0;
+              const estimasi = prompt('Estimasi tiba (YYYY-MM-DD):', String(s.estimasi_tiba || '').slice(0, 10));
+              if (!estimasi) return;
+              try {
+                await API.put('/api/pengiriman/' + s.id_pengiriman, {
+                  id_kurir: s.id_kurir,
+                  layanan,
+                  no_resi: resi,
+                  ongkos_kirim: Number(ongkir),
+                  total_berat_gram: Number(berat),
+                  tanggal_kirim: s.tanggal_kirim,
+                  estimasi_tiba: estimasi,
+                  tanggal_tiba: s.tanggal_tiba,
+                  status_kirim: status,
+                  catatan: s.catatan || ''
+                });
+                showSuccess('Pengiriman diperbarui.');
+                await loadShipments();
+                await loadKurirStats();
+              } catch (err) { showError(err.message); }
+            }
+          }, 'Edit'),
+          ' | ',
+          el('button', {
+            class: 'link-btn',
+            onclick: async () => {
+              if (!confirm('Hapus pengiriman ini? Riwayat tracking ikut terhapus.')) return;
+              try {
+                await API.del('/api/pengiriman/' + s.id_pengiriman);
+                showSuccess('Pengiriman dihapus.');
+                await loadShipmentOptions();
+                await loadShipments();
+                await loadKurirStats();
+              } catch (err) { showError(err.message); }
+            }
+          }, 'Hapus')
+        )
+      ));
+    }
+  }
 
   async function loadKurirStats() {
     const rows = await API.get('/api/pengiriman/kurir-stats');
@@ -74,69 +276,108 @@
     const { tracking, riwayat, pesanan, items, bayar } = data;
 
     wrap.innerHTML = `
-      <h3>Detail Tracking</h3>
-      <ul class="kv-list">
-        <li>Kurir: ${tracking.nama_kurir} (${tracking.kode_kurir}) ${tracking.layanan || ''}</li>
-        <li>No. Resi: <strong>${tracking.no_resi}</strong></li>
-        <li>Status: <strong>${statusLabel(window.STATUS_KIRIM, tracking.status_kirim)}</strong></li>
-        <li>Tanggal Kirim: ${formatTanggal(tracking.tanggal_kirim)}</li>
-        <li>Estimasi Tiba: ${formatTanggal(tracking.estimasi_tiba)}</li>
-        <li>Ongkos Kirim: ${rupiah(tracking.ongkos_kirim)}</li>
-        <li>Berat Paket: ${tracking.total_berat_gram} gram</li>
-      </ul>
+      <section class="section">
+        <div class="section-header">
+          <div>
+            <h3>Detail Tracking</h3>
+            <p>Status kirim, resi, dan biaya paket.</p>
+          </div>
+          <div class="section-actions">
+            <a href="/pesanan/${pesanan.id_pesanan}" class="btn">Buka Pesanan</a>
+          </div>
+        </div>
+        <div class="section-body">
+          <ul class="kv-list summary-list">
+            <li>Kurir: ${tracking.nama_kurir} (${tracking.kode_kurir}) ${tracking.layanan || ''}</li>
+            <li>No. Resi: <strong>${tracking.no_resi}</strong></li>
+            <li>Status: <strong>${statusLabel(window.STATUS_KIRIM, tracking.status_kirim)}</strong></li>
+            <li>Tanggal Kirim: ${formatTanggal(tracking.tanggal_kirim)}</li>
+            <li>Estimasi Tiba: ${formatTanggal(tracking.estimasi_tiba)}</li>
+            <li>Ongkos Kirim: ${rupiah(tracking.ongkos_kirim)}</li>
+            <li>Berat Paket: ${tracking.total_berat_gram} gram</li>
+          </ul>
+        </div>
+      </section>
 
-      <h3>Riwayat Perjalanan Paket</h3>
-      ${riwayat.length === 0
-        ? '<p>Belum ada riwayat tracking.</p>'
-        : `<table class="table">
-            <thead><tr><th>Waktu</th><th>Lokasi</th><th>Keterangan</th></tr></thead>
-            <tbody>
-              ${riwayat.map(rs => `
-                <tr>
-                  <td>${formatTanggalJam(rs.waktu_update)}</td>
-                  <td>${rs.lokasi || '-'}</td>
-                  <td>${rs.deskripsi}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>`
-      }
+      <section class="section">
+        <div class="section-header">
+          <div>
+            <h3>Riwayat Perjalanan</h3>
+            <p>Urutan update paket.</p>
+          </div>
+        </div>
+        <div class="section-body">
+          ${riwayat.length === 0
+            ? '<p>Belum ada riwayat tracking.</p>'
+            : `<table class="table">
+                <thead><tr><th>Waktu</th><th>Lokasi</th><th>Keterangan</th></tr></thead>
+                <tbody>
+                  ${riwayat.map(rs => `
+                    <tr>
+                      <td>${formatTanggalJam(rs.waktu_update)}</td>
+                      <td>${rs.lokasi || '-'}</td>
+                      <td>${rs.deskripsi}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>`
+          }
+        </div>
+      </section>
 
-      <h3>Alamat Penerima</h3>
-      <ul class="kv-list">
-        <li>Penerima: ${pesanan.penerima}</li>
-        <li>Telepon: ${pesanan.no_hp_penerima}</li>
-        <li>Alamat: ${pesanan.alamat_lengkap}, ${pesanan.kota}, ${pesanan.provinsi} ${pesanan.kode_pos}</li>
-      </ul>
+      <div class="page-split equal-split">
+        <section class="section">
+          <div class="section-header">
+            <div>
+              <h3>Alamat Penerima</h3>
+              <p>Tujuan pengiriman.</p>
+            </div>
+          </div>
+          <div class="section-body">
+            <ul class="kv-list summary-list">
+              <li>Penerima: ${pesanan.penerima}</li>
+              <li>Telepon: ${pesanan.no_hp_penerima}</li>
+              <li>Alamat: ${pesanan.alamat_lengkap}, ${pesanan.kota}, ${pesanan.provinsi} ${pesanan.kode_pos}</li>
+            </ul>
+          </div>
+        </section>
 
-      <h3>Ringkasan Pesanan #TK-${pad(pesanan.id_pesanan, 4)}</h3>
-      <table class="table">
-        <thead><tr><th>Produk</th><th>Jumlah</th><th>Harga Satuan</th></tr></thead>
-        <tbody>
-          ${items.map(it => `
-            <tr>
-              <td>${it.nama_produk}</td>
-              <td>${it.jumlah}</td>
-              <td>${rupiah(it.harga_satuan)}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
+        <section class="section">
+          <div class="section-header">
+            <div>
+              <h3>Ringkasan Pesanan</h3>
+              <p>#TK-${pad(pesanan.id_pesanan, 4)}</p>
+            </div>
+          </div>
+          <div class="section-body">
+            <table class="table">
+              <thead><tr><th>Produk</th><th>Jumlah</th><th>Harga Satuan</th></tr></thead>
+              <tbody>
+                ${items.map(it => `
+                  <tr>
+                    <td>${it.nama_produk}</td>
+                    <td>${it.jumlah}</td>
+                    <td>${rupiah(it.harga_satuan)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
 
-      <ul class="kv-list">
-        <li>Subtotal Produk: ${rupiah(pesanan.total_harga)}</li>
-        <li>Ongkos Kirim: ${rupiah(pesanan.ongkos_kirim)}</li>
-        <li>Diskon: - ${rupiah(pesanan.diskon)}</li>
-        <li>Total Bayar: <strong>${rupiah(pesanan.total_tagihan)}</strong></li>
-      </ul>
+            <ul class="kv-list summary-list">
+              <li>Subtotal Produk: ${rupiah(pesanan.total_harga)}</li>
+              <li>Ongkos Kirim: ${rupiah(pesanan.ongkos_kirim)}</li>
+              <li>Diskon: - ${rupiah(pesanan.diskon)}</li>
+              <li>Total Bayar: <strong>${rupiah(pesanan.total_tagihan)}</strong></li>
+            </ul>
 
-      ${bayar ? `<p>
-        Pembayaran <strong>${statusLabel(window.STATUS_BAYAR, bayar.status_bayar)}</strong>
-        via ${metodeLabel(bayar.metode, bayar.nama_penyedia)}${bayar.tanggal_bayar
-          ? ' pada ' + formatTanggalJam(bayar.tanggal_bayar) : ''}.
-      </p>` : ''}
-
-      <p><a href="/pesanan/${pesanan.id_pesanan}" class="btn">Buka Pesanan</a></p>
+            ${bayar ? `<p>
+              Pembayaran <strong>${statusLabel(window.STATUS_BAYAR, bayar.status_bayar)}</strong>
+              via ${metodeLabel(bayar.metode, bayar.nama_penyedia)}${bayar.tanggal_bayar
+                ? ' pada ' + formatTanggalJam(bayar.tanggal_bayar) : ''}.
+            </p>` : ''}
+          </div>
+        </section>
+      </div>
     `;
   }
 
@@ -157,7 +398,34 @@
     loadTracking();
   });
 
+  document.getElementById('addShipmentForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await API.post('/api/pengiriman', {
+        id_pesanan: document.getElementById('shipOrder').value,
+        id_kurir: document.getElementById('shipKurir').value,
+        layanan: document.getElementById('shipLayanan').value,
+        no_resi: document.getElementById('shipResi').value,
+        ongkos_kirim: Number(document.getElementById('shipOngkir').value),
+        total_berat_gram: Number(document.getElementById('shipBerat').value),
+        tanggal_kirim: document.getElementById('shipTanggal').value || undefined,
+        estimasi_tiba: document.getElementById('shipEstimasi').value,
+        status_kirim: document.getElementById('shipStatus').value,
+        deskripsi_awal: document.getElementById('shipRiwayat').value
+      });
+      e.target.reset();
+      document.getElementById('shipOngkir').value = 0;
+      document.getElementById('shipBerat').value = 0;
+      showSuccess('Pengiriman ditambahkan.');
+      await loadShipmentOptions();
+      await loadShipments();
+      await loadKurirStats();
+    } catch (err) { showError(err.message); }
+  });
+
   (async () => {
+    await loadShipmentOptions();
+    await loadShipments();
     await loadKurirStats();
     const url = new URLSearchParams(location.search);
     if (url.get('q'))     document.getElementById('fQ').value = url.get('q');

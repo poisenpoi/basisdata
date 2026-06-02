@@ -114,3 +114,30 @@ function showSuccess(msg) {
   clear(box);
   box.appendChild(div);
 }
+
+function updatePanelToggle(btn, panel) {
+  const isOpen = !panel.classList.contains('is-hidden');
+  const section = panel.classList.contains('section-body') ? panel.closest('.section') : null;
+  if (section) section.classList.toggle('section-collapsed', !isOpen);
+  btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  btn.textContent = isOpen
+    ? (btn.getAttribute('data-open-label') || 'Tutup')
+    : (btn.getAttribute('data-closed-label') || 'Buka');
+}
+
+function initPanelToggles(root) {
+  const scope = root || document;
+  scope.querySelectorAll('[data-toggle-panel]').forEach((btn) => {
+    if (btn.getAttribute('data-panel-bound') === 'true') return;
+    const panel = document.getElementById(btn.getAttribute('data-toggle-panel'));
+    if (!panel) return;
+    btn.setAttribute('data-panel-bound', 'true');
+    updatePanelToggle(btn, panel);
+    btn.addEventListener('click', () => {
+      panel.classList.toggle('is-hidden');
+      updatePanelToggle(btn, panel);
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => initPanelToggles());

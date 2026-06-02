@@ -16,9 +16,9 @@
 <body>
 
 <div class="app-shell">
-  <%- include('../partials/sidebar') %>
+  <%- include('../partials/header') %>
 
-  <div class="main">
+  <main class="main">
     <%- include('../partials/topbar', {
       pageTitle: typeof pageTitle !== 'undefined' ? pageTitle : title,
       breadcrumb: typeof breadcrumb !== 'undefined' ? breadcrumb : ''
@@ -28,7 +28,17 @@
       <div id="flash"></div>
       <%- body %>
     </div>
-  </div>
+
+    <footer class="site-footer">
+      <div>
+        <strong>TokoKita Admin</strong>
+        <span>Panel operasional toko</span>
+      </div>
+      <div class="footer-meta">
+        REST API / MySQL / Session Auth
+      </div>
+    </footer>
+  </main>
 </div>
 
 </body>

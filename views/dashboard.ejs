@@ -3,27 +3,48 @@
   <p>Ringkasan aktivitas TokoKita.</p>
 </div>
 
-<h3>Statistik Hari Ini</h3>
-<ul class="kv-list" id="statsList">
-  <li>Memuat...</li>
-</ul>
+<div class="page-stack">
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <h3>Statistik Hari Ini</h3>
+        <p>Ringkasan status operasional toko.</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <ul class="kv-list summary-list" id="statsList">
+        <li>Memuat...</li>
+      </ul>
+    </div>
+  </section>
 
-<h3>Pesanan Terbaru</h3>
-<table class="table">
-  <thead>
-    <tr>
-      <th>Pelanggan</th>
-      <th>Produk</th>
-      <th>Total</th>
-      <th>Status</th>
-    </tr>
-  </thead>
-  <tbody id="recentOrders">
-    <tr><td colspan="4">Memuat...</td></tr>
-  </tbody>
-</table>
-
-<p><a href="/pesanan">Lihat semua pesanan</a></p>
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <h3>Pesanan Terbaru</h3>
+        <p>Aktivitas pesanan paling baru.</p>
+      </div>
+      <div class="section-actions">
+        <a href="/pesanan" class="btn">Lihat Semua</a>
+      </div>
+    </div>
+    <div class="section-body">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Pelanggan</th>
+            <th>Produk</th>
+            <th>Total</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="recentOrders">
+          <tr><td colspan="4">Memuat...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
 
 <script>
   (async () => {

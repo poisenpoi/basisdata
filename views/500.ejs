@@ -1,6 +1,7 @@
+<p class="page-actions"><a href="/" class="btn">Kembali ke Dashboard</a></p>
+
 <h2>Terjadi Kesalahan</h2>
 <p>Sistem mengalami kendala saat memproses permintaan Anda.</p>
 <% if (process.env.NODE_ENV !== 'production' && error) { %>
   <pre class="error-trace"><%= error.stack || error.message %></pre>
 <% } %>
-<p><a href="/">Kembali ke Dashboard</a></p>
