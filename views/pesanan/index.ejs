@@ -3,7 +3,7 @@
     <div class="section-header">
       <div>
         <h3>Input Pesanan</h3>
-        <p>Buat pesanan awal, lalu detailnya bisa dikoreksi dari halaman pesanan.</p>
+        <p>Buat pesanan baru secara manual</p>
       </div>
       <div class="section-actions">
         <button type="button" class="btn" data-toggle-panel="addOrderPanel" data-closed-label="Input Pesanan" data-open-label="Tutup Input">Input Pesanan</button>
@@ -54,18 +54,72 @@
     <div class="section-header">
       <div>
         <h3>Daftar Pesanan</h3>
-        <p>Filter, buka detail, atau hapus pesanan.</p>
+        <p>Cari, filter by pembayaran/pengiriman, sort by pesanan, dan detail pesanan</p>
       </div>
     </div>
     <div class="section-body">
-      <p class="tabs" id="statusTabs">Memuat...</p>
-
       <form id="filterForm">
         <div class="filter-bar">
-          <input type="hidden" id="fStatus">
-          <label>
+          <label class="filter-search">
             Cari:
             <input type="text" id="fQ" placeholder="ID atau nama pelanggan...">
+          </label>
+          <label>
+            Filter By Status:
+            <select id="fStatus">
+              <option value="semua">Semua</option>
+              <option value="menunggu_bayar">Menunggu Bayar</option>
+              <option value="diproses">Diproses</option>
+              <option value="dikirim">Dikirim</option>
+              <option value="selesai">Selesai</option>
+              <option value="dibatalkan">Dibatalkan</option>
+            </select>
+          </label>
+          <label>
+            Filter By Pembayaran:
+            <select id="fBayarStatus">
+              <option value="">Semua</option>
+              <option value="belum_bayar">Belum Ada Data Bayar</option>
+              <option value="pending">Pending</option>
+              <option value="berhasil">Berhasil</option>
+              <option value="gagal">Gagal</option>
+              <option value="refund">Refund</option>
+            </select>
+          </label>
+          <label>
+            Filter By Metode:
+            <select id="fMetode">
+              <option value="">Semua</option>
+              <option value="transfer_bank">Transfer Bank</option>
+              <option value="e_wallet">E-Wallet</option>
+              <option value="cod">COD</option>
+            </select>
+          </label>
+          <label>
+            Filter By Pengiriman:
+            <select id="fHasShipping">
+              <option value="">Semua</option>
+              <option value="ya">Sudah Ada Pengiriman</option>
+              <option value="tidak">Belum Ada Pengiriman</option>
+            </select>
+          </label>
+          <label>
+            Filter By Kurir:
+            <select id="fKurir">
+              <option value="">Semua</option>
+            </select>
+          </label>
+          <label>
+            Sort By:
+            <select id="fSort">
+              <option value="tanggal_desc">Tanggal Terbaru</option>
+              <option value="tanggal_asc">Tanggal Terlama</option>
+              <option value="total_desc">Total Terbesar</option>
+              <option value="total_asc">Total Terkecil</option>
+              <option value="pelanggan_asc">Pelanggan A-Z</option>
+              <option value="pelanggan_desc">Pelanggan Z-A</option>
+              <option value="status">Status</option>
+            </select>
           </label>
           <button type="submit" class="btn">Filter</button>
         </div>
@@ -86,7 +140,6 @@
             </tr>
           </thead>
           <tbody id="rows">
-            <tr><td colspan="8">Memuat...</td></tr>
           </tbody>
         </table>
       </div>
@@ -97,16 +150,15 @@
 </div>
 
 <script>
-  const TABS = [
-    { key: 'semua',          label: 'Semua' },
-    { key: 'menunggu_bayar', label: 'Menunggu Bayar' },
-    { key: 'diproses',       label: 'Diproses' },
-    { key: 'dikirim',        label: 'Dikirim' },
-    { key: 'selesai',        label: 'Selesai' },
-    { key: 'dibatalkan',     label: 'Dibatalkan' }
+  const FILTER_KURIR = [
+    { kode: 'JNE', label: 'JNE - JNE' },
+    { kode: 'JNT', label: 'JNT - JNT' },
+    { kode: 'SICEPAT', label: 'SICEPAT - SiCepat' }
   ];
 
   function pad(n, w) { return String(n).padStart(w, '0'); }
+
+  let orderOptionsLoaded = false;
 
   async function loadOrderOptions() {
     const opts = await API.get('/api/pesanan/options');
@@ -128,31 +180,36 @@
         `${p.nama_produk} - ${rupiah(p.harga)} - stok ${p.stok}`
       ));
     }
+    orderOptionsLoaded = true;
   }
 
-  async function loadCounts(activeKey) {
-    const counts = await API.get('/api/pesanan/counts');
-    const wrap = document.getElementById('statusTabs');
-    clear(wrap);
-    TABS.forEach((t) => {
-      const a = el('a', {
-        href: '#',
-        class: 'tab ' + (activeKey === t.key ? 'active' : ''),
-        onclick: (e) => {
-          e.preventDefault();
-          document.getElementById('fStatus').value = t.key;
-          loadAll(t.key);
-        }
-      }, `${t.label} (${counts[t.key] || 0})`);
-      wrap.appendChild(a);
-    });
-    return counts;
+  async function ensureOrderOptions(force) {
+    if (orderOptionsLoaded && !force) return;
+    await loadOrderOptions();
+  }
+
+  function loadKurirFilter() {
+    const sel = document.getElementById('fKurir');
+    while (sel.options.length > 1) sel.remove(1);
+    for (const k of FILTER_KURIR) {
+      sel.appendChild(el('option', { value: k.kode }, k.label));
+    }
   }
 
   async function loadList(status, q) {
     const params = new URLSearchParams();
     if (status && status !== 'semua') params.set('status', status);
     if (q) params.set('q', q);
+    const bayarStatus = document.getElementById('fBayarStatus').value;
+    const metode = document.getElementById('fMetode').value;
+    const hasShipping = document.getElementById('fHasShipping').value;
+    const kurir = document.getElementById('fKurir').value;
+    const sort = document.getElementById('fSort').value;
+    if (bayarStatus) params.set('bayar_status', bayarStatus);
+    if (metode) params.set('metode', metode);
+    if (hasShipping) params.set('has_shipping', hasShipping);
+    if (kurir) params.set('kurir', kurir);
+    if (sort) params.set('sort', sort);
     return API.get('/api/pesanan' + (params.toString() ? '?' + params : ''));
   }
 
@@ -208,11 +265,10 @@
   async function loadAll(status) {
     try {
       const q = document.getElementById('fQ').value;
-      const counts = await loadCounts(status);
       const out = await loadList(status, q);
       renderRows(out.data);
       document.getElementById('resultInfo').textContent =
-        `Menampilkan ${out.data.length} dari ${counts.semua} pesanan.`;
+        `Menampilkan ${out.data.length} pesanan.`;
     } catch (err) { showError(err.message); }
   }
 
@@ -220,6 +276,12 @@
     e.preventDefault();
     loadAll(document.getElementById('fStatus').value || 'semua');
   });
+  document.getElementById('fStatus').addEventListener('change', () => loadAll(document.getElementById('fStatus').value || 'semua'));
+  document.getElementById('fBayarStatus').addEventListener('change', () => loadAll(document.getElementById('fStatus').value || 'semua'));
+  document.getElementById('fMetode').addEventListener('change', () => loadAll(document.getElementById('fStatus').value || 'semua'));
+  document.getElementById('fHasShipping').addEventListener('change', () => loadAll(document.getElementById('fStatus').value || 'semua'));
+  document.getElementById('fKurir').addEventListener('change', () => loadAll(document.getElementById('fStatus').value || 'semua'));
+  document.getElementById('fSort').addEventListener('change', () => loadAll(document.getElementById('fStatus').value || 'semua'));
 
   document.getElementById('addOrderForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -238,14 +300,28 @@
       document.getElementById('orderOngkir').value = 0;
       document.getElementById('orderDiskon').value = 0;
       showSuccess('Pesanan ditambahkan.');
+      orderOptionsLoaded = false;
       loadAll(document.getElementById('fStatus').value || 'semua');
     } catch (err) { showError(err.message); }
+  });
+
+  document.querySelector('[data-toggle-panel="addOrderPanel"]')?.addEventListener('click', () => {
+    setTimeout(() => {
+      if (!document.getElementById('addOrderPanel').classList.contains('is-hidden')) {
+        ensureOrderOptions().catch(err => showError(err.message));
+      }
+    }, 0);
   });
 
   const url = new URLSearchParams(location.search);
   const initStatus = url.get('status') || 'semua';
   document.getElementById('fStatus').value = initStatus;
   if (url.get('q')) document.getElementById('fQ').value = url.get('q');
-  loadOrderOptions().catch(err => showError(err.message));
-  loadAll(initStatus);
+  if (url.get('bayar_status')) document.getElementById('fBayarStatus').value = url.get('bayar_status');
+  if (url.get('metode')) document.getElementById('fMetode').value = url.get('metode');
+  if (url.get('has_shipping')) document.getElementById('fHasShipping').value = url.get('has_shipping');
+  if (url.get('sort')) document.getElementById('fSort').value = url.get('sort');
+  loadKurirFilter();
+  if (url.get('kurir')) document.getElementById('fKurir').value = url.get('kurir');
+  document.getElementById('resultInfo').textContent = '';
 </script>

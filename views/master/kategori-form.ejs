@@ -1,0 +1,54 @@
+<p class="page-actions"><a href="/master" class="btn">Kembali</a></p>
+
+<h2>Edit Kategori</h2>
+
+<section class="section">
+  <div class="section-header">
+    <div>
+      <h3>Data Kategori</h3>
+      <p>Ubah nama dan deskripsi kategori produk</p>
+    </div>
+  </div>
+  <div class="section-body">
+    <form id="kategoriForm">
+      <div class="field-grid">
+        <div class="form-group">
+          <label for="namaKategori">Nama Kategori</label>
+          <input id="namaKategori" type="text" class="form-control" required>
+        </div>
+
+        <div class="form-group span-full">
+          <label for="deskripsi">Deskripsi</label>
+          <textarea id="deskripsi" class="form-control" rows="4"></textarea>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Simpan Kategori</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<script>
+  const ID_KATEGORI = "<%= idKategori %>";
+
+  async function loadKategori() {
+    const k = await API.get('/api/kategori/' + ID_KATEGORI);
+    document.getElementById('namaKategori').value = k.nama_kategori || '';
+    document.getElementById('deskripsi').value = k.deskripsi || '';
+  }
+
+  document.getElementById('kategoriForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await API.put('/api/kategori/' + ID_KATEGORI, {
+        nama_kategori: document.getElementById('namaKategori').value,
+        deskripsi: document.getElementById('deskripsi').value
+      });
+      location.href = '/master';
+    } catch (err) { showError(err.message); }
+  });
+
+  loadKategori().catch(err => showError(err.message));
+</script>

@@ -25,7 +25,7 @@ async function recalcOrderTotal(conn, idPesanan) {
 
 router.get('/', async (req, res, next) => {
   try {
-    const { status, q } = req.query;
+    const { status, q, bayar_status, metode, has_shipping, kurir, sort } = req.query;
     let where = '1=1';
     const params = [];
     if (status && status !== 'semua') {
@@ -36,6 +36,36 @@ router.get('/', async (req, res, next) => {
       where += ' AND (pl.nama LIKE ? OR pl.email LIKE ? OR p.id_pesanan = ?)';
       params.push(`%${q}%`, `%${q}%`, isNaN(parseInt(q)) ? 0 : parseInt(q));
     }
+    if (bayar_status === 'belum_bayar') {
+      where += ' AND pay.id_pembayaran IS NULL';
+    } else if (bayar_status) {
+      where += ' AND pay.status_bayar = ?';
+      params.push(bayar_status);
+    }
+    if (metode) {
+      where += ' AND pay.metode = ?';
+      params.push(metode);
+    }
+    if (has_shipping === 'ya') {
+      where += ' AND pg.id_pengiriman IS NOT NULL';
+    } else if (has_shipping === 'tidak') {
+      where += ' AND pg.id_pengiriman IS NULL';
+    }
+    if (kurir) {
+      where += ' AND kr.kode_kurir = ?';
+      params.push(kurir);
+    }
+
+    const orderMap = {
+      tanggal_desc: 'p.tanggal_pesan DESC, p.id_pesanan DESC',
+      tanggal_asc: 'p.tanggal_pesan ASC, p.id_pesanan ASC',
+      total_desc: 'p.total_tagihan DESC, p.id_pesanan DESC',
+      total_asc: 'p.total_tagihan ASC, p.id_pesanan ASC',
+      pelanggan_asc: 'pl.nama ASC, p.tanggal_pesan DESC',
+      pelanggan_desc: 'pl.nama DESC, p.tanggal_pesan DESC',
+      status: 'p.status_pesanan ASC, p.tanggal_pesan DESC'
+    };
+    const orderBy = orderMap[sort] || orderMap.tanggal_desc;
 
     const [rows] = await db.query(`
       SELECT
@@ -49,7 +79,7 @@ router.get('/', async (req, res, next) => {
       LEFT JOIN pengiriman pg  ON pg.id_pesanan = p.id_pesanan
       LEFT JOIN master_kurir kr ON kr.id_kurir = pg.id_kurir
       WHERE ${where}
-      ORDER BY p.tanggal_pesan DESC, p.id_pesanan DESC
+      ORDER BY ${orderBy}
     `, params);
 
     res.json({ data: rows });

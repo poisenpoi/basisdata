@@ -3,7 +3,7 @@
     <div class="section-header">
       <div>
         <h3>Ringkasan Produk</h3>
-        <p>Status stok dan total kategori.</p>
+        <p>Status stok dan total kategori</p>
       </div>
       <div class="section-actions">
         <a href="/produk/baru" class="btn btn-primary">Tambah Produk</a>
@@ -11,7 +11,6 @@
     </div>
     <div class="section-body">
       <ul class="kv-list summary-list" id="productCounts">
-        <li>Memuat...</li>
       </ul>
     </div>
   </section>
@@ -20,20 +19,24 @@
     <div class="section-header">
       <div>
         <h3>Daftar Produk</h3>
-        <p>Filter produk berdasarkan kategori, stok, dan nama.</p>
+        <p>Cari, filter by kategori/stok/status, dan sort by data produk</p>
       </div>
     </div>
     <div class="section-body">
       <form id="filterForm">
         <div class="filter-bar">
+          <label class="filter-search">
+            Cari:
+            <input type="text" name="q" id="fQ" placeholder="Nama produk...">
+          </label>
           <label>
-            Kategori:
+            Filter By Kategori:
             <select name="kategori" id="fKategori">
               <option value="">Semua</option>
             </select>
           </label>
           <label>
-            Stok:
+            Filter By Stok:
             <select name="stok" id="fStok">
               <option value="">Semua</option>
               <option value="tersedia">Tersedia</option>
@@ -42,18 +45,26 @@
             </select>
           </label>
           <label>
-            Urutkan:
-            <select name="sort" id="fSort">
-              <option value="">Default</option>
-              <option value="nama_asc">Nama A-Z</option>
-              <option value="termurah">Harga Termurah</option>
-              <option value="termahal">Harga Termahal</option>
-              <option value="stok_rendah">Stok Rendah</option>
+            Filter By Status:
+            <select name="aktif" id="fAktif">
+              <option value="">Semua</option>
+              <option value="1">Aktif</option>
+              <option value="0">Nonaktif</option>
             </select>
           </label>
           <label>
-            Cari:
-            <input type="text" name="q" id="fQ" placeholder="Nama produk...">
+            Sort By:
+            <select name="sort" id="fSort">
+              <option value="terbaru">Terbaru</option>
+              <option value="terlama">Terlama</option>
+              <option value="nama_asc">Nama A-Z</option>
+              <option value="nama_desc">Nama Z-A</option>
+              <option value="termurah">Harga Termurah</option>
+              <option value="termahal">Harga Termahal</option>
+              <option value="stok_rendah">Stok Rendah</option>
+              <option value="stok_banyak">Stok Terbanyak</option>
+              <option value="kategori">Kategori</option>
+            </select>
           </label>
           <button type="submit" class="btn">Terapkan</button>
         </div>
@@ -68,12 +79,12 @@
               <th>Harga</th>
               <th>Stok</th>
               <th>Berat</th>
-              <th>Status</th>
+              <th>Status Stok</th>
+              <th>Status Produk</th>
               <th>Aksi</th>
             </tr>
           </thead>
           <tbody id="productRows">
-            <tr><td colspan="7">Memuat...</td></tr>
           </tbody>
         </table>
       </div>
@@ -84,12 +95,77 @@
 </div>
 
 <script>
+  const FILTER_KATEGORI = [
+    [33, 'Aksesori Busana'],
+    [62, 'Aksesori Komputer'],
+    [23, 'Area Mandi Rumah'],
+    [17, 'Aroma Tubuh'],
+    [29, 'Atasan Harian'],
+    [59, 'Audio Harian'],
+    [48, 'Bahan Kue'],
+    [30, 'Bawahan Harian'],
+    [12, 'Bayi Keluarga'],
+    [10, 'Bekal dan Makanan'],
+    [58, 'Belajar Anak'],
+    [47, 'Botol dan Kotak Bekal'],
+    [36, 'Buku Catatan'],
+    [27, 'Bumbu dan Rempah'],
+    [44, 'Camilan Kering'],
+    [6, 'Dapur Nusantara'],
+    [20, 'Dekorasi Ruang'],
+    [13, 'Digital dan Aksesori'],
+    [1, 'Elektronik'],
+    [2, 'Fashion'],
+    [7, 'Gaya Sehari Hari'],
+    [9, 'Hobi Kreatif'],
+    [60, 'Kabel dan Charger'],
+    [53, 'Keamanan Perjalanan'],
+    [18, 'Kebersihan Pribadi'],
+    [21, 'Kebersihan Rumah'],
+    [39, 'Kerajinan Tangan'],
+    [43, 'Koleksi Mini'],
+    [46, 'Kopi dan Teh'],
+    [38, 'Lampu Kerja'],
+    [40, 'Lukis dan Gambar'],
+    [55, 'Mainan Anak'],
+    [56, 'Makan Bayi'],
+    [45, 'Makanan Instan'],
+    [35, 'Meja dan Organizer'],
+    [28, 'Minuman Hangat'],
+    [41, 'Musik Ringan'],
+    [52, 'Olahraga Ringan'],
+    [54, 'Pakaian Bayi'],
+    [61, 'Pelindung Gadget'],
+    [63, 'Pencahayaan Digital'],
+    [19, 'Penyimpanan Rumah'],
+    [25, 'Peralatan Makan'],
+    [24, 'Peralatan Masak'],
+    [37, 'Perangkat Kerja'],
+    [57, 'Perawatan Bayi'],
+    [4, 'Perawatan Diri'],
+    [16, 'Perawatan Rambut'],
+    [15, 'Perawatan Wajah'],
+    [11, 'Perjalanan dan Outdoor'],
+    [50, 'Perlengkapan Hujan'],
+    [5, 'Perlengkapan Rumah'],
+    [34, 'Perlengkapan Tulis'],
+    [42, 'Permainan Meja'],
+    [8, 'Ruang Kerja'],
+    [22, 'Ruang Tidur Rumah'],
+    [3, 'Rumah Tangga'],
+    [14, 'Sabun dan Sampo'],
+    [31, 'Sepatu dan Sandal'],
+    [32, 'Tas Harian'],
+    [49, 'Tas Perjalanan'],
+    [51, 'Tidur Outdoor'],
+    [26, 'Wadah Dapur']
+  ];
+
   async function loadKategori() {
     try {
-      const kategori = await API.get('/api/kategori');
       const sel = document.getElementById('fKategori');
-      for (const k of kategori) {
-        sel.appendChild(el('option', { value: k.id_kategori }, `${k.nama_kategori} (${k.total})`));
+      for (const [id, nama] of FILTER_KATEGORI) {
+        sel.appendChild(el('option', { value: id }, nama));
       }
       const url = new URLSearchParams(location.search);
       if (url.get('kategori')) sel.value = url.get('kategori');
@@ -101,6 +177,7 @@
       q:        document.getElementById('fQ').value,
       kategori: document.getElementById('fKategori').value,
       stok:     document.getElementById('fStok').value,
+      aktif:    document.getElementById('fAktif').value,
       sort:     document.getElementById('fSort').value
     });
     for (const k of [...params.keys()]) if (!params.get(k)) params.delete(k);
@@ -118,7 +195,7 @@
       const tbody = document.getElementById('productRows');
       clear(tbody);
       if (!out.data.length) {
-        tbody.appendChild(el('tr', null, el('td', { colspan: 7 }, 'Tidak ada produk.')));
+        tbody.appendChild(el('tr', null, el('td', { colspan: 8 }, 'Tidak ada produk.')));
       } else {
         for (const p of out.data) {
           let stok = 'Tersedia';
@@ -145,6 +222,7 @@
             el('td', null, p.stok + ' unit'),
             el('td', null, p.berat_gram + ' g'),
             el('td', null, stok),
+            el('td', null, p.is_active ? 'Aktif' : 'Nonaktif'),
             el('td', null, editLink, ' | ', delBtn)
           ));
         }
@@ -160,10 +238,11 @@
   });
   document.getElementById('fKategori').addEventListener('change', loadProducts);
   document.getElementById('fStok').addEventListener('change', loadProducts);
+  document.getElementById('fAktif').addEventListener('change', loadProducts);
   document.getElementById('fSort').addEventListener('change', loadProducts);
 
   (async () => {
     await loadKategori();
-    await loadProducts();
+    document.getElementById('resultInfo').textContent = '';
   })();
 </script>

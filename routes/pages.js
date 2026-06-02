@@ -76,11 +76,29 @@ router.get('/pengiriman', requireAuth, (req, res) => {
   });
 });
 
+router.get('/pengiriman/:id/edit', requireAuth, (req, res) => {
+  res.render('pengiriman/form', {
+    title: 'Edit Pengiriman - TokoKita',
+    pageTitle: 'Edit Pengiriman',
+    breadcrumb: 'Home / Pengiriman / Edit',
+    idPengiriman: req.params.id
+  });
+});
+
 router.get('/pembayaran', requireAuth, (req, res) => {
   res.render('pembayaran/index', {
     title: 'Pembayaran - TokoKita',
     pageTitle: 'Daftar Pembayaran',
     breadcrumb: 'Home / Pembayaran'
+  });
+});
+
+router.get('/pembayaran/:id/edit', requireAuth, (req, res) => {
+  res.render('pembayaran/form', {
+    title: 'Edit Pembayaran - TokoKita',
+    pageTitle: 'Edit Pembayaran',
+    breadcrumb: 'Home / Pembayaran / Edit',
+    idPembayaran: req.params.id
   });
 });
 
@@ -92,11 +110,47 @@ router.get('/pelanggan', requireAuth, (req, res) => {
   });
 });
 
+router.get('/pelanggan/:id/edit', requireAuth, (req, res) => {
+  res.render('pelanggan/form', {
+    title: 'Edit Pelanggan - TokoKita',
+    pageTitle: 'Edit Pelanggan',
+    breadcrumb: 'Home / Pelanggan / Edit',
+    idPelanggan: req.params.id
+  });
+});
+
+router.get('/pelanggan/:id', requireAuth, (req, res) => {
+  res.render('pelanggan/detail', {
+    title: 'Detail Pelanggan - TokoKita',
+    pageTitle: 'Detail Pelanggan',
+    breadcrumb: 'Home / Pelanggan / Detail',
+    idPelanggan: req.params.id
+  });
+});
+
 router.get('/master', requireAuth, (req, res) => {
   res.render('master/index', {
     title: 'Master Data - TokoKita',
     pageTitle: 'Master Data',
     breadcrumb: 'Home / Master Data'
+  });
+});
+
+router.get('/master/kategori/:id/edit', requireAuth, (req, res) => {
+  res.render('master/kategori-form', {
+    title: 'Edit Kategori - TokoKita',
+    pageTitle: 'Edit Kategori',
+    breadcrumb: 'Home / Master Data / Kategori / Edit',
+    idKategori: req.params.id
+  });
+});
+
+router.get('/master/kurir/:id/edit', requireAuth, (req, res) => {
+  res.render('master/kurir-form', {
+    title: 'Edit Kurir - TokoKita',
+    pageTitle: 'Edit Kurir',
+    breadcrumb: 'Home / Master Data / Kurir / Edit',
+    idKurir: req.params.id
   });
 });
 

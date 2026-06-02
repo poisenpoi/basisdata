@@ -1,0 +1,64 @@
+<p class="page-actions"><a href="/master" class="btn">Kembali</a></p>
+
+<h2>Edit Kurir</h2>
+
+<section class="section">
+  <div class="section-header">
+    <div>
+      <h3>Data Kurir</h3>
+      <p>Ubah kode, nama, dan status aktif kurir</p>
+    </div>
+  </div>
+  <div class="section-body">
+    <form id="kurirForm">
+      <div class="field-grid">
+        <div class="form-group">
+          <label for="kodeKurir">Kode</label>
+          <input id="kodeKurir" type="text" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="namaKurir">Nama Kurir</label>
+          <input id="namaKurir" type="text" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="isActive">Status</label>
+          <select id="isActive" class="form-control">
+            <option value="1">Aktif</option>
+            <option value="0">Nonaktif</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Simpan Kurir</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<script>
+  const ID_KURIR = "<%= idKurir %>";
+
+  async function loadKurir() {
+    const k = await API.get('/api/kurir/' + ID_KURIR);
+    document.getElementById('kodeKurir').value = k.kode_kurir || '';
+    document.getElementById('namaKurir').value = k.nama_kurir || '';
+    document.getElementById('isActive').value = k.is_active ? '1' : '0';
+  }
+
+  document.getElementById('kurirForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await API.put('/api/kurir/' + ID_KURIR, {
+        kode_kurir: document.getElementById('kodeKurir').value,
+        nama_kurir: document.getElementById('namaKurir').value,
+        is_active: Number(document.getElementById('isActive').value)
+      });
+      location.href = '/master';
+    } catch (err) { showError(err.message); }
+  });
+
+  loadKurir().catch(err => showError(err.message));
+</script>

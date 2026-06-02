@@ -1,0 +1,101 @@
+<p class="page-actions"><a href="/pembayaran" class="btn">Kembali</a></p>
+
+<h2>Edit Pembayaran</h2>
+
+<section class="section">
+  <div class="section-header">
+    <div>
+      <h3>Data Pembayaran</h3>
+      <p>Edit metode, nominal, tanggal, dan status pembayaran</p>
+    </div>
+  </div>
+  <div class="section-body">
+    <form id="pembayaranForm">
+      <div class="field-grid">
+        <div class="form-group">
+          <label>Pesanan</label>
+          <input id="orderLabel" type="text" class="form-control" disabled>
+        </div>
+
+        <div class="form-group">
+          <label>Total Tagihan</label>
+          <input id="totalTagihan" type="text" class="form-control" disabled>
+        </div>
+
+        <div class="form-group">
+          <label for="metode">Metode</label>
+          <select id="metode" class="form-control" required>
+            <option value="transfer_bank">Transfer Bank</option>
+            <option value="e_wallet">E-Wallet</option>
+            <option value="cod">COD</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="penyedia">Penyedia</label>
+          <input id="penyedia" type="text" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="jumlahBayar">Jumlah Bayar</label>
+          <input id="jumlahBayar" type="number" min="0" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="tanggalBayar">Tanggal Bayar</label>
+          <input id="tanggalBayar" type="datetime-local" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="statusBayar">Status</label>
+          <select id="statusBayar" class="form-control">
+            <option value="pending">Pending</option>
+            <option value="berhasil">Berhasil</option>
+            <option value="gagal">Gagal</option>
+            <option value="refund">Refund</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Simpan Pembayaran</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<script>
+  const ID_PEMBAYARAN = "<%= idPembayaran %>";
+
+  function toDateTimeInput(value) {
+    if (!value) return '';
+    return String(value).replace(' ', 'T').slice(0, 16);
+  }
+
+  async function loadPembayaran() {
+    const p = await API.get('/api/pembayaran/' + ID_PEMBAYARAN);
+    document.getElementById('orderLabel').value = '#TK-' + String(p.id_pesanan).padStart(4, '0') + ' - ' + p.pelanggan_nama;
+    document.getElementById('totalTagihan').value = rupiah(p.total_tagihan);
+    document.getElementById('metode').value = p.metode || 'cod';
+    document.getElementById('penyedia').value = p.nama_penyedia || '';
+    document.getElementById('jumlahBayar').value = Number(p.jumlah_bayar || 0);
+    document.getElementById('tanggalBayar').value = toDateTimeInput(p.tanggal_bayar);
+    document.getElementById('statusBayar').value = p.status_bayar || 'pending';
+  }
+
+  document.getElementById('pembayaranForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await API.put('/api/pembayaran/' + ID_PEMBAYARAN, {
+        metode: document.getElementById('metode').value,
+        nama_penyedia: document.getElementById('penyedia').value,
+        jumlah_bayar: Number(document.getElementById('jumlahBayar').value),
+        tanggal_bayar: document.getElementById('tanggalBayar').value || undefined,
+        status_bayar: document.getElementById('statusBayar').value
+      });
+      location.href = '/pembayaran';
+    } catch (err) { showError(err.message); }
+  });
+
+  loadPembayaran().catch(err => showError(err.message));
+</script>

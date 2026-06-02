@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.get('/', async (req, res, next) => {
   try {
-    const { q, kategori, stok, sort } = req.query;
+    const { q, kategori, stok, aktif, sort } = req.query;
 
     let where = '1=1';
     const params = [];
@@ -17,12 +17,23 @@ router.get('/', async (req, res, next) => {
     if (stok === 'habis')    where += ' AND p.stok = 0';
     if (stok === 'rendah')   where += ' AND p.stok > 0 AND p.stok <= 10';
     if (stok === 'tersedia') where += ' AND p.stok > 10';
+    if (aktif === '1' || aktif === '0') {
+      where += ' AND p.is_active = ?';
+      params.push(Number(aktif));
+    }
 
-    let orderBy = 'p.id_produk DESC';
-    if (sort === 'termurah')    orderBy = 'p.harga ASC';
-    if (sort === 'termahal')    orderBy = 'p.harga DESC';
-    if (sort === 'nama_asc')    orderBy = 'p.nama_produk ASC';
-    if (sort === 'stok_rendah') orderBy = 'p.stok ASC';
+    const orderMap = {
+      terbaru: 'p.id_produk DESC',
+      terlama: 'p.id_produk ASC',
+      nama_asc: 'p.nama_produk ASC',
+      nama_desc: 'p.nama_produk DESC',
+      termurah: 'p.harga ASC, p.nama_produk ASC',
+      termahal: 'p.harga DESC, p.nama_produk ASC',
+      stok_rendah: 'p.stok ASC, p.nama_produk ASC',
+      stok_banyak: 'p.stok DESC, p.nama_produk ASC',
+      kategori: 'k.nama_kategori ASC, p.nama_produk ASC'
+    };
+    const orderBy = orderMap[sort] || orderMap.terbaru;
 
     const [rows] = await db.query(`
       SELECT p.*, k.nama_kategori

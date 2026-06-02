@@ -17,6 +17,18 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.get('/:id', async (req, res, next) => {
+  try {
+    const [[row]] = await db.query(`
+      SELECT id_kategori, id_parent_kategori, nama_kategori, deskripsi
+      FROM kategori
+      WHERE id_kategori = ?
+    `, [req.params.id]);
+    if (!row) return res.status(404).json({ error: 'Kategori tidak ditemukan.' });
+    res.json(row);
+  } catch (err) { next(err); }
+});
+
 router.post('/', async (req, res, next) => {
   try {
     const { nama_kategori, deskripsi, id_parent_kategori } = req.body || {};

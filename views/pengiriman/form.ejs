@@ -1,0 +1,146 @@
+<p class="page-actions"><a href="/pengiriman" class="btn">Kembali</a></p>
+
+<h2>Edit Pengiriman</h2>
+
+<section class="section">
+  <div class="section-header">
+    <div>
+      <h3>Data Pengiriman</h3>
+      <p>Edit kurir, resi, ongkir, jadwal, dan status paket</p>
+    </div>
+  </div>
+  <div class="section-body">
+    <form id="pengirimanForm">
+      <div class="field-grid">
+        <div class="form-group">
+          <label>Pesanan</label>
+          <input id="orderLabel" type="text" class="form-control" disabled>
+        </div>
+
+        <div class="form-group">
+          <label for="kurir">Kurir</label>
+          <select id="kurir" class="form-control" required></select>
+        </div>
+
+        <div class="form-group">
+          <label for="layanan">Layanan</label>
+          <input id="layanan" type="text" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="resi">No. Resi</label>
+          <input id="resi" type="text" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="ongkir">Ongkir</label>
+          <input id="ongkir" type="number" min="0" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="berat">Berat (gram)</label>
+          <input id="berat" type="number" min="0" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="tanggalKirim">Tanggal Kirim</label>
+          <input id="tanggalKirim" type="datetime-local" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="estimasi">Estimasi Tiba</label>
+          <input id="estimasi" type="date" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="tanggalTiba">Tanggal Tiba</label>
+          <input id="tanggalTiba" type="datetime-local" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="statusKirim">Status</label>
+          <select id="statusKirim" class="form-control">
+            <option value="diproses">Diproses</option>
+            <option value="dalam_perjalanan">Dalam Perjalanan</option>
+            <option value="tiba_di_kota">Tiba di Kota</option>
+            <option value="out_for_delivery">Sedang Diantar</option>
+            <option value="terkirim">Terkirim</option>
+            <option value="gagal_kirim">Gagal</option>
+            <option value="retur">Retur</option>
+          </select>
+        </div>
+
+        <div class="form-group span-full">
+          <label for="catatan">Catatan</label>
+          <input id="catatan" type="text" class="form-control">
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Simpan Pengiriman</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<script>
+  const ID_PENGIRIMAN = "<%= idPengiriman %>";
+  let currentShipment = null;
+
+  function toDateTimeInput(value) {
+    if (!value) return '';
+    return String(value).replace(' ', 'T').slice(0, 16);
+  }
+
+  function toDateInput(value) {
+    if (!value) return '';
+    return String(value).slice(0, 10);
+  }
+
+  async function loadKurir(selectedId) {
+    const rows = await API.get('/api/kurir');
+    const sel = document.getElementById('kurir');
+    clear(sel);
+    for (const k of rows) {
+      const opt = el('option', { value: k.id_kurir }, `${k.kode_kurir} - ${k.nama_kurir}`);
+      if (String(selectedId) === String(k.id_kurir)) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+
+  async function loadPengiriman() {
+    currentShipment = await API.get('/api/pengiriman/' + ID_PENGIRIMAN);
+    await loadKurir(currentShipment.id_kurir);
+    document.getElementById('orderLabel').value = '#TK-' + String(currentShipment.id_pesanan).padStart(4, '0') + ' - ' + currentShipment.pelanggan_nama;
+    document.getElementById('layanan').value = currentShipment.layanan || '';
+    document.getElementById('resi').value = currentShipment.no_resi || '';
+    document.getElementById('ongkir').value = Number(currentShipment.ongkos_kirim || 0);
+    document.getElementById('berat').value = Number(currentShipment.total_berat_gram || 0);
+    document.getElementById('tanggalKirim').value = toDateTimeInput(currentShipment.tanggal_kirim);
+    document.getElementById('estimasi').value = toDateInput(currentShipment.estimasi_tiba);
+    document.getElementById('tanggalTiba').value = toDateTimeInput(currentShipment.tanggal_tiba);
+    document.getElementById('statusKirim').value = currentShipment.status_kirim || 'diproses';
+    document.getElementById('catatan').value = currentShipment.catatan || '';
+  }
+
+  document.getElementById('pengirimanForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await API.put('/api/pengiriman/' + ID_PENGIRIMAN, {
+        id_kurir: document.getElementById('kurir').value,
+        layanan: document.getElementById('layanan').value,
+        no_resi: document.getElementById('resi').value,
+        ongkos_kirim: Number(document.getElementById('ongkir').value),
+        total_berat_gram: Number(document.getElementById('berat').value),
+        tanggal_kirim: document.getElementById('tanggalKirim').value || undefined,
+        estimasi_tiba: document.getElementById('estimasi').value,
+        tanggal_tiba: document.getElementById('tanggalTiba').value || undefined,
+        status_kirim: document.getElementById('statusKirim').value,
+        catatan: document.getElementById('catatan').value
+      });
+      location.href = '/pengiriman';
+    } catch (err) { showError(err.message); }
+  });
+
+  loadPengiriman().catch(err => showError(err.message));
+</script>

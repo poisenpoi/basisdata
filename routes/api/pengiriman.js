@@ -38,6 +38,37 @@ function validateShippingStatus(res, statusKirim) {
 
 router.get('/', async (req, res, next) => {
   try {
+    const { q, status, kurir, order_status, sort } = req.query;
+    let where = '1=1';
+    const params = [];
+    if (q) {
+      where += ' AND (pg.no_resi LIKE ? OR pl.nama LIKE ? OR p.id_pesanan = ?)';
+      params.push(`%${q}%`, `%${q}%`, isNaN(parseInt(q)) ? 0 : parseInt(q));
+    }
+    if (status) {
+      where += ' AND pg.status_kirim = ?';
+      params.push(status);
+    }
+    if (kurir) {
+      where += ' AND kr.kode_kurir = ?';
+      params.push(kurir);
+    }
+    if (order_status) {
+      where += ' AND p.status_pesanan = ?';
+      params.push(order_status);
+    }
+
+    const orderMap = {
+      terbaru: 'pg.tanggal_kirim DESC, pg.id_pengiriman DESC',
+      terlama: 'pg.tanggal_kirim ASC, pg.id_pengiriman ASC',
+      estimasi_terdekat: 'pg.estimasi_tiba ASC, pg.id_pengiriman ASC',
+      estimasi_terjauh: 'pg.estimasi_tiba DESC, pg.id_pengiriman DESC',
+      status: 'pg.status_kirim ASC, pg.tanggal_kirim DESC',
+      kurir: 'kr.kode_kurir ASC, pg.tanggal_kirim DESC',
+      pelanggan: 'pl.nama ASC, pg.tanggal_kirim DESC'
+    };
+    const orderBy = orderMap[sort] || orderMap.terbaru;
+
     const [rows] = await db.query(`
       SELECT
         pg.*,
@@ -49,8 +80,9 @@ router.get('/', async (req, res, next) => {
       JOIN master_kurir kr ON kr.id_kurir = pg.id_kurir
       JOIN pesanan p ON p.id_pesanan = pg.id_pesanan
       JOIN pelanggan pl ON pl.id_pelanggan = p.id_pelanggan
-      ORDER BY pg.id_pengiriman DESC
-    `);
+      WHERE ${where}
+      ORDER BY ${orderBy}
+    `, params);
     res.json(rows);
   } catch (err) { next(err); }
 });
@@ -266,6 +298,21 @@ router.get('/track', async (req, res, next) => {
     const [[bayar]] = await db.query('SELECT * FROM pembayaran WHERE id_pesanan = ?', [tracking.id_pesanan]);
 
     res.json({ tracking, riwayat, pesanan, items, bayar: bayar || null });
+  } catch (err) { next(err); }
+});
+
+router.get('/:id', async (req, res, next) => {
+  try {
+    const [[row]] = await db.query(`
+      SELECT pg.*, kr.kode_kurir, kr.nama_kurir, pl.nama AS pelanggan_nama
+      FROM pengiriman pg
+      JOIN master_kurir kr ON kr.id_kurir = pg.id_kurir
+      JOIN pesanan p ON p.id_pesanan = pg.id_pesanan
+      JOIN pelanggan pl ON pl.id_pelanggan = p.id_pelanggan
+      WHERE pg.id_pengiriman = ?
+    `, [req.params.id]);
+    if (!row) return res.status(404).json({ error: 'Pengiriman tidak ditemukan.' });
+    res.json(row);
   } catch (err) { next(err); }
 });
 

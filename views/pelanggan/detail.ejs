@@ -1,0 +1,217 @@
+<p class="page-actions"><a href="/pelanggan" class="btn">Kembali</a></p>
+
+<div class="detail-title">
+  <div>
+    <h2 id="customerTitle">Memuat...</h2>
+    <p class="text-muted" id="customerMeta"></p>
+  </div>
+  <div class="section-actions">
+    <a href="/pelanggan/<%= idPelanggan %>/edit" class="btn">Edit Pelanggan</a>
+  </div>
+</div>
+
+<div class="page-stack">
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <h3>Ringkasan Pelanggan</h3>
+        <p>Identitas, status akun, dan total transaksi pelanggan</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <ul class="kv-list summary-list" id="customerSummary">
+        <li>Memuat...</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <h3>Alamat Pelanggan</h3>
+        <p>Alamat yang tersimpan untuk pelanggan ini</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Label</th>
+              <th>Penerima</th>
+              <th>No. HP</th>
+              <th>Alamat</th>
+              <th>Utama</th>
+            </tr>
+          </thead>
+          <tbody id="addressRows">
+            <tr><td colspan="5">Memuat...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <h3>List Pesanan</h3>
+        <p>Riwayat pesanan pelanggan ini</p>
+      </div>
+    </div>
+    <div class="section-body">
+      <form id="orderFilterForm" class="filter-bar">
+        <label>
+          Filter By Status:
+          <select id="orderStatus">
+            <option value="semua">Semua</option>
+            <option value="menunggu_bayar">Menunggu Bayar</option>
+            <option value="diproses">Diproses</option>
+            <option value="dikirim">Dikirim</option>
+            <option value="selesai">Selesai</option>
+            <option value="dibatalkan">Dibatalkan</option>
+          </select>
+        </label>
+        <label>
+          Sort By:
+          <select id="orderSort">
+            <option value="tanggal_desc">Tanggal Terbaru</option>
+            <option value="tanggal_asc">Tanggal Terlama</option>
+            <option value="total_desc">Total Terbesar</option>
+            <option value="total_asc">Total Terkecil</option>
+            <option value="status">Status</option>
+          </select>
+        </label>
+        <button type="submit" class="btn">Filter</button>
+      </form>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID Pesanan</th>
+              <th>Tanggal</th>
+              <th>Produk</th>
+              <th>Total</th>
+              <th>Pembayaran</th>
+              <th>Kurir</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="orderRows">
+            <tr><td colspan="8">Memuat...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="text-muted" id="orderResultInfo"></p>
+    </div>
+  </section>
+</div>
+
+<script>
+  const ID_PELANGGAN = "<%= idPelanggan %>";
+  const STATUS_AKUN = {
+    aktif: 'Aktif',
+    nonaktif: 'Nonaktif',
+    diblokir: 'Diblokir'
+  };
+
+  function pad(n, w) { return String(n).padStart(w, '0'); }
+
+  function produkText(order) {
+    const totalItem = Number(order.total_item || 0);
+    if (!order.produk_utama) return '-';
+    if (totalItem > 1) return `${order.produk_utama} + ${totalItem - 1} item`;
+    return order.produk_utama;
+  }
+
+  function renderSummary(p) {
+    const summary = document.getElementById('customerSummary');
+    clear(summary);
+    summary.appendChild(el('li', null, 'Nama:', el('strong', null, p.nama)));
+    summary.appendChild(el('li', null, 'Email:', el('strong', null, p.email)));
+    summary.appendChild(el('li', null, 'No. HP:', el('strong', null, p.no_hp)));
+    summary.appendChild(el('li', null, 'Tanggal Daftar:', el('strong', null, formatTanggal(p.tanggal_daftar))));
+    summary.appendChild(el('li', null, 'Status Akun:', el('strong', null, STATUS_AKUN[p.status_akun] || p.status_akun)));
+    summary.appendChild(el('li', null, 'Total Pesanan:', el('strong', null, String(p.total_pesanan || 0))));
+    summary.appendChild(el('li', null, 'Total Belanja:', el('strong', null, rupiah(p.total_belanja))));
+    summary.appendChild(el('li', null, 'Tagihan Menunggu:', el('strong', null, rupiah(p.tagihan_menunggu))));
+  }
+
+  function renderAddresses(rows) {
+    const tbody = document.getElementById('addressRows');
+    clear(tbody);
+    if (!rows || !rows.length) {
+      tbody.appendChild(el('tr', null, el('td', { colspan: 5 }, 'Belum ada alamat.')));
+      return;
+    }
+    for (const a of rows) {
+      tbody.appendChild(el('tr', null,
+        el('td', null, a.label || '-'),
+        el('td', null, a.penerima || '-'),
+        el('td', null, a.no_hp_penerima || '-'),
+        el('td', null, `${a.alamat_lengkap}, ${a.kota}, ${a.provinsi} ${a.kode_pos}`),
+        el('td', null, a.is_utama ? 'Ya' : 'Tidak')
+      ));
+    }
+  }
+
+  async function loadCustomer() {
+    try {
+      const p = await API.get('/api/pelanggan/' + ID_PELANGGAN);
+      document.getElementById('customerTitle').textContent = p.nama;
+      document.getElementById('customerMeta').textContent =
+        `${p.email} - ${STATUS_AKUN[p.status_akun] || p.status_akun}`;
+      renderSummary(p);
+      renderAddresses(p.alamat || []);
+    } catch (err) { showError(err.message); }
+  }
+
+  async function loadOrders() {
+    const params = new URLSearchParams();
+    const status = document.getElementById('orderStatus').value;
+    const sort = document.getElementById('orderSort').value;
+    if (status && status !== 'semua') params.set('status', status);
+    if (sort) params.set('sort', sort);
+
+    try {
+      const rows = await API.get('/api/pelanggan/' + ID_PELANGGAN + '/orders' + (params.toString() ? '?' + params : ''));
+      const tbody = document.getElementById('orderRows');
+      clear(tbody);
+      if (!rows.length) {
+        tbody.appendChild(el('tr', null, el('td', { colspan: 8 }, 'Belum ada pesanan.')));
+        document.getElementById('orderResultInfo').textContent = 'Menampilkan 0 pesanan.';
+        return;
+      }
+      for (const o of rows) {
+        const bayar = o.bayar_metode
+          ? `${metodeLabel(o.bayar_metode, o.bayar_penyedia)} - ${statusLabel(window.STATUS_BAYAR, o.status_bayar)}`
+          : '-';
+        tbody.appendChild(el('tr', null,
+          el('td', null, '#TK-' + pad(o.id_pesanan, 4)),
+          el('td', null, formatTanggalJam(o.tanggal_pesan)),
+          el('td', null, produkText(o)),
+          el('td', null, rupiah(o.total_tagihan)),
+          el('td', null, bayar),
+          el('td', null, o.kode_kurir || '-'),
+          el('td', null, statusLabel(window.STATUS_PESANAN, o.status_pesanan)),
+          el('td', null, el('a', { href: '/pesanan/' + o.id_pesanan }, 'Detail'))
+        ));
+      }
+      document.getElementById('orderResultInfo').textContent =
+        `Menampilkan ${rows.length} pesanan.`;
+    } catch (err) { showError(err.message); }
+  }
+
+  document.getElementById('orderFilterForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    loadOrders();
+  });
+  document.getElementById('orderStatus').addEventListener('change', loadOrders);
+  document.getElementById('orderSort').addEventListener('change', loadOrders);
+
+  loadCustomer();
+  loadOrders();
+</script>

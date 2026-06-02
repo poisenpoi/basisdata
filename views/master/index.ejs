@@ -3,7 +3,7 @@
     <div class="section-header">
       <div>
         <h3>Kategori Produk</h3>
-        <p>Master kategori untuk produk.</p>
+        <p>Master kategori produk</p>
       </div>
       <div class="section-actions">
         <button type="button" class="btn" data-toggle-panel="kategoriInputPanel" data-closed-label="Input Kategori" data-open-label="Tutup Input">Input Kategori</button>
@@ -44,7 +44,7 @@
     <div class="section-header">
       <div>
         <h3>Kurir</h3>
-        <p>Master ekspedisi yang bisa dipakai pengiriman.</p>
+        <p>Master dari kurir ekspedisi</p>
       </div>
       <div class="section-actions">
         <button type="button" class="btn" data-toggle-panel="kurirInputPanel" data-closed-label="Input Kurir" data-open-label="Tutup Input">Input Kurir</button>
@@ -104,19 +104,7 @@
         el('td', null, k.deskripsi || '-'),
         el('td', null, String(k.total || 0)),
         el('td', null,
-          el('button', {
-            class: 'link-btn',
-            onclick: async () => {
-              const nama = prompt('Nama kategori:', k.nama_kategori);
-              if (!nama) return;
-              const deskripsi = prompt('Deskripsi:', k.deskripsi || '') || '';
-              try {
-                await API.put('/api/kategori/' + k.id_kategori, { nama_kategori: nama, deskripsi });
-                showSuccess('Kategori diperbarui.');
-                loadKategori();
-              } catch (err) { showError(err.message); }
-            }
-          }, 'Edit'),
+          el('a', { href: '/master/kategori/' + k.id_kategori + '/edit' }, 'Edit'),
           ' | ',
           el('button', {
             class: 'link-btn',
@@ -148,25 +136,7 @@
         el('td', null, k.nama_kurir),
         el('td', null, k.is_active ? 'Aktif' : 'Nonaktif'),
         el('td', null,
-          el('button', {
-            class: 'link-btn',
-            onclick: async () => {
-              const kode = prompt('Kode kurir:', k.kode_kurir);
-              if (!kode) return;
-              const nama = prompt('Nama kurir:', k.nama_kurir);
-              if (!nama) return;
-              const aktif = confirm('Aktifkan kurir ini?');
-              try {
-                await API.put('/api/kurir/' + k.id_kurir, {
-                  kode_kurir: kode,
-                  nama_kurir: nama,
-                  is_active: aktif ? 1 : 0
-                });
-                showSuccess('Kurir diperbarui.');
-                loadKurir();
-              } catch (err) { showError(err.message); }
-            }
-          }, 'Edit'),
+          el('a', { href: '/master/kurir/' + k.id_kurir + '/edit' }, 'Edit'),
           ' | ',
           el('button', {
             class: 'link-btn',

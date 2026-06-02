@@ -3,7 +3,7 @@
     <div class="section-header">
       <div>
         <h3>Input Pelanggan</h3>
-        <p>Tambah pelanggan baru beserta alamat awal jika diperlukan.</p>
+        <p>Tambah data pelanggan baru</p>
       </div>
       <div class="section-actions">
         <button type="button" class="btn" data-toggle-panel="addCustomerPanel" data-closed-label="Input Pelanggan" data-open-label="Tutup Input">Input Pelanggan</button>
@@ -60,22 +60,54 @@
     <div class="section-header">
       <div>
         <h3>Daftar Pelanggan</h3>
-        <p>Cari, filter status, dan koreksi data pelanggan.</p>
+        <p>Cari, filter by status/pesanan, sort by data pelanggan, dan detail pelanggan</p>
       </div>
     </div>
     <div class="section-body">
       <form id="filterForm" class="filter-bar">
-        <label>
+        <label class="filter-search">
           Cari:
           <input type="text" id="fQ" placeholder="Nama, email, no. HP...">
         </label>
         <label>
-          Status:
+          Filter By Status:
           <select id="fStatus">
             <option value="">Semua</option>
             <option value="aktif">Aktif</option>
             <option value="nonaktif">Nonaktif</option>
             <option value="diblokir">Diblokir</option>
+          </select>
+        </label>
+        <label>
+          Filter By Pesanan:
+          <select id="fHasOrder">
+            <option value="">Semua</option>
+            <option value="ya">Punya Pesanan</option>
+            <option value="tidak">Belum Ada Pesanan</option>
+          </select>
+        </label>
+        <label>
+          Filter By Status Pesanan:
+          <select id="fOrderStatus">
+            <option value="">Semua</option>
+            <option value="menunggu_bayar">Menunggu Bayar</option>
+            <option value="diproses">Diproses</option>
+            <option value="dikirim">Dikirim</option>
+            <option value="selesai">Selesai</option>
+            <option value="dibatalkan">Dibatalkan</option>
+          </select>
+        </label>
+        <label>
+          Sort By:
+          <select id="fSort">
+            <option value="terbaru">Terbaru Daftar</option>
+            <option value="terlama">Terlama Daftar</option>
+            <option value="nama_asc">Nama A-Z</option>
+            <option value="nama_desc">Nama Z-A</option>
+            <option value="pesanan_terbanyak">Pesanan Terbanyak</option>
+            <option value="pesanan_tersedikit">Pesanan Tersedikit</option>
+            <option value="belanja_terbesar">Belanja Terbesar</option>
+            <option value="belanja_terkecil">Belanja Terkecil</option>
           </select>
         </label>
         <button type="submit" class="btn">Filter</button>
@@ -100,6 +132,8 @@
           </tbody>
         </table>
       </div>
+
+      <p class="text-muted" id="resultInfo"></p>
     </div>
   </section>
 </div>
@@ -115,41 +149,26 @@
     const params = new URLSearchParams();
     const q = document.getElementById('fQ').value;
     const s = document.getElementById('fStatus').value;
+    const hasOrder = document.getElementById('fHasOrder').value;
+    const orderStatus = document.getElementById('fOrderStatus').value;
+    const sort = document.getElementById('fSort').value;
     if (q) params.set('q', q);
     if (s) params.set('status', s);
+    if (hasOrder) params.set('has_order', hasOrder);
+    if (orderStatus) params.set('order_status', orderStatus);
+    if (sort) params.set('sort', sort);
     try {
       const rows = await API.get('/api/pelanggan' + (params.toString() ? '?' + params : ''));
       const tbody = document.getElementById('rows');
       clear(tbody);
       if (!rows.length) {
         tbody.appendChild(el('tr', null, el('td', { colspan: 8 }, 'Tidak ada pelanggan.')));
+        document.getElementById('resultInfo').textContent = 'Menampilkan 0 pelanggan.';
         return;
       }
       for (const p of rows) {
-        const editBtn = el('button', {
-          class: 'link-btn',
-          onclick: async () => {
-            const nama = prompt('Nama pelanggan:', p.nama);
-            if (!nama) return;
-            const email = prompt('Email:', p.email);
-            if (!email) return;
-            const noHp = prompt('No. HP:', p.no_hp);
-            if (!noHp) return;
-            const status = prompt('Status akun (aktif/nonaktif/diblokir):', p.status_akun) || p.status_akun;
-            const password = prompt('Password baru (kosongkan jika tidak diubah):', '');
-            try {
-              await API.put('/api/pelanggan/' + p.id_pelanggan, {
-                nama,
-                email,
-                no_hp: noHp,
-                status_akun: status,
-                password
-              });
-              showSuccess('Pelanggan diperbarui.');
-              load();
-            } catch (err) { showError(err.message); }
-          }
-        }, 'Edit');
+        const detailBtn = el('a', { href: '/pelanggan/' + p.id_pelanggan }, 'Detail');
+        const editBtn = el('a', { href: '/pelanggan/' + p.id_pelanggan + '/edit' }, 'Edit');
 
         const delBtn = el('button', {
           class: 'link-btn',
@@ -171,9 +190,11 @@
           el('td', null, String(p.total_pesanan)),
           el('td', null, rupiah(p.total_belanja)),
           el('td', null, STATUS_AKUN[p.status_akun] || p.status_akun),
-          el('td', null, editBtn, ' | ', delBtn)
+          el('td', null, detailBtn, ' | ', editBtn, ' | ', delBtn)
         ));
       }
+      document.getElementById('resultInfo').textContent =
+        `Menampilkan ${rows.length} pelanggan.`;
     } catch (err) { showError(err.message); }
   }
 
@@ -203,5 +224,8 @@
     load();
   });
   document.getElementById('fStatus').addEventListener('change', load);
+  document.getElementById('fHasOrder').addEventListener('change', load);
+  document.getElementById('fOrderStatus').addEventListener('change', load);
+  document.getElementById('fSort').addEventListener('change', load);
   load();
 </script>

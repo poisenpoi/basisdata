@@ -24,20 +24,37 @@ function validatePayment(res, metode, statusBayar) {
 
 router.get('/', async (req, res, next) => {
   try {
-    const { status, metode } = req.query;
+    const { q, status, metode, order_status, sort } = req.query;
     let where = '1=1';
     const params = [];
+    if (q) {
+      where += ' AND (pl.nama LIKE ? OR pl.email LIKE ? OR pay.nama_penyedia LIKE ? OR p.id_pesanan = ?)';
+      params.push(`%${q}%`, `%${q}%`, `%${q}%`, isNaN(parseInt(q)) ? 0 : parseInt(q));
+    }
     if (status) { where += ' AND pay.status_bayar = ?'; params.push(status); }
     if (metode) { where += ' AND pay.metode = ?';      params.push(metode); }
+    if (order_status) { where += ' AND p.status_pesanan = ?'; params.push(order_status); }
+
+    const orderMap = {
+      terbaru: 'pay.id_pembayaran DESC',
+      terlama: 'pay.id_pembayaran ASC',
+      tanggal_desc: 'pay.tanggal_bayar DESC, pay.id_pembayaran DESC',
+      tanggal_asc: 'pay.tanggal_bayar ASC, pay.id_pembayaran ASC',
+      jumlah_desc: 'pay.jumlah_bayar DESC, pay.id_pembayaran DESC',
+      jumlah_asc: 'pay.jumlah_bayar ASC, pay.id_pembayaran ASC',
+      pelanggan_asc: 'pl.nama ASC, pay.id_pembayaran DESC',
+      status: 'pay.status_bayar ASC, pay.id_pembayaran DESC'
+    };
+    const orderBy = orderMap[sort] || orderMap.terbaru;
 
     const [rows] = await db.query(`
-      SELECT pay.*, p.id_pesanan,
+      SELECT pay.*, p.id_pesanan, p.status_pesanan,
         pl.nama AS pelanggan_nama, pl.email AS pelanggan_email
       FROM pembayaran pay
       JOIN pesanan p ON p.id_pesanan = pay.id_pesanan
       JOIN pelanggan pl ON pl.id_pelanggan = p.id_pelanggan
       WHERE ${where}
-      ORDER BY pay.id_pembayaran DESC
+      ORDER BY ${orderBy}
     `, params);
 
     res.json(rows);
@@ -55,6 +72,20 @@ router.get('/options', async (req, res, next) => {
       ORDER BY p.id_pesanan DESC
     `);
     res.json({ orders });
+  } catch (err) { next(err); }
+});
+
+router.get('/:id', async (req, res, next) => {
+  try {
+    const [[row]] = await db.query(`
+      SELECT pay.*, p.total_tagihan, pl.nama AS pelanggan_nama
+      FROM pembayaran pay
+      JOIN pesanan p ON p.id_pesanan = pay.id_pesanan
+      JOIN pelanggan pl ON pl.id_pelanggan = p.id_pelanggan
+      WHERE pay.id_pembayaran = ?
+    `, [req.params.id]);
+    if (!row) return res.status(404).json({ error: 'Pembayaran tidak ditemukan.' });
+    res.json(row);
   } catch (err) { next(err); }
 });
 
